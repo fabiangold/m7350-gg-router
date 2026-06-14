@@ -1,0 +1,151 @@
+#!/bin/sh
+
+VPN_DIR="/usrdata/vpn"
+OPENVPN="$VPN_DIR/openvpn"
+CONFIG="$VPN_DIR/current.ovpn"
+LOG="$VPN_DIR/vpn.log"
+PID="$VPN_DIR/openvpn.pid"
+
+
+wait_for_network() {
+  local host
+  host="$(grep '^remote ' "$CONFIG" 2>/dev/null | head -1 | awk '{print $2}')"
+  [ -z "$host" ] && host="1.1.1.1"
+  local i=0
+  while [ $i -lt 40 ]; do
+    nslookup "$host" >/dev/null 2>&1 && return 0
+    sleep 3
+    i=$((i+1))
+  done
+  return 0
+}
+harden_router_runtime() {
+  chmod 700 "$OPENVPN" 2>/dev/null
+  chmod 600 "$VPN_DIR/auth.txt" "$VPN_DIR/web_token" "$CONFIG" "$VPN_DIR"/profiles/*.ovpn 2>/dev/null
+  uci -c /data/config set wlan.basic_setting.show_passphrase_on_oled='0' 2>/dev/null
+  uci -c /data/config set wlan.basic_setting.wps_feature='0' 2>/dev/null
+  uci -c /data/config set wlan.basic_setting.ap_isolate='1' 2>/dev/null
+  uci -c /data/config commit wlan 2>/dev/null
+  ps w 2>/dev/null | grep 'busybox telnetd' | grep -v grep | awk '{print $1}' | while read pid; do
+    kill "$pid" 2>/dev/null
+  done
+  killall upnpd 2>/dev/null
+  killall wscd 2>/dev/null
+  killall telnetd 2>/dev/null
+}
+
+add_kill_switch() {
+  iptables -C FORWARD -i bridge0 -o rmnet+ -j DROP 2>/dev/null || \
+    iptables -I FORWARD 1 -i bridge0 -o rmnet+ -j DROP 2>/dev/null
+}
+
+remove_kill_switch() {
+  iptables -D FORWARD -i bridge0 -o rmnet+ -j DROP 2>/dev/null || true
+}
+
+fix_dns_leak() {
+  echo "nameserver 1.1.1.1" > /etc/resolv.conf
+  echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+  iptables -t nat -C PREROUTING -i bridge0 -p udp --dport 53 -j DNAT --to 1.1.1.1 2>/dev/null || \
+    iptables -t nat -I PREROUTING 1 -i bridge0 -p udp --dport 53 -j DNAT --to 1.1.1.1 2>/dev/null
+  iptables -t nat -C PREROUTING -i bridge0 -p tcp --dport 53 -j DNAT --to 1.1.1.1 2>/dev/null || \
+    iptables -t nat -I PREROUTING 1 -i bridge0 -p tcp --dport 53 -j DNAT --to 1.1.1.1 2>/dev/null
+}
+
+add_ttl_rule() {
+  iptables -t mangle -C POSTROUTING -o rmnet+ -j TTL --ttl-set 65 2>/dev/null || \
+    iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set 65 2>/dev/null
+}
+
+add_masquerade_rules() {
+  iptables -t nat -C POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -o tun0 -j MASQUERADE 2>/dev/null
+  iptables -t nat -C POSTROUTING -o rmnet_data0 -j MASQUERADE 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -o rmnet_data0 -j MASQUERADE 2>/dev/null
+}
+
+add_local_hardening_rules() {
+  iptables -C INPUT -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null || \
+    iptables -I INPUT 1 -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null
+  iptables -C INPUT -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null || \
+    iptables -I INPUT 1 -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null
+}
+
+start_oled_daemon() {
+  if [ -x "$VPN_DIR/gg_oled.sh" ]; then
+    killall gg_oled.sh 2>/dev/null
+    "$VPN_DIR/gg_oled.sh" &
+  fi
+}
+
+start_vpn() {
+  mkdir -p "$VPN_DIR"
+  harden_router_runtime
+  add_kill_switch
+  fix_dns_leak
+  add_ttl_rule
+  add_masquerade_rules
+  add_local_hardening_rules
+
+  if [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; then
+    echo "VPN: already running pid=$(cat "$PID")"
+    start_oled_daemon
+    return 0
+  fi
+
+  killall openvpn 2>/dev/null
+  "$OPENVPN" --config "$CONFIG" --daemon --writepid "$PID" --log "$LOG"
+  start_oled_daemon
+}
+
+stop_vpn() {
+  if [ -f "$PID" ]; then
+    kill "$(cat "$PID")" 2>/dev/null
+    rm -f "$PID"
+  fi
+  killall openvpn 2>/dev/null
+  remove_kill_switch
+}
+
+status_vpn() {
+  if ip addr show tun0 >/dev/null 2>&1; then
+    echo "VPN: CONNECTED"
+    ip addr show tun0 | grep inet
+    exit 0
+  fi
+  echo "VPN: DISCONNECTED"
+  exit 1
+}
+
+case "$1" in
+  start)
+    add_kill_switch
+    fix_dns_leak
+    wait_for_network
+    start_vpn
+    ;;
+  stop)
+    stop_vpn
+    ;;
+  restart)
+    stop_vpn
+    sleep 2
+    start_vpn
+    ;;
+  status)
+    status_vpn
+    ;;
+  watchdog)
+    if ! ip addr show tun0 >/dev/null 2>&1; then
+      stop_vpn
+      sleep 2
+      start_vpn
+    fi
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart|status|watchdog}"
+    exit 2
+    ;;
+esac
+
+exit 0

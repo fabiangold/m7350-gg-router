@@ -1,0 +1,8 @@
+*.sh text eol=lf
+scripts/start_vpn_hardened text eol=lf
+web/cgi-bin/* text eol=lf
+*.ps1 text eol=crlf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.md text eol=lf

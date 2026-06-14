@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GG Router Admin</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">GG</div>
+        <div>
+          <h1>GG Router</h1>
+          <p id="deviceLine">M7350 Admin Panel</p>
+        </div>
+      </div>
+      <div class="status-stack">
+        <div class="status-pill" id="vpnPill">CHECK</div>
+        <button id="refreshAll">Refresh</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Admin sections">
+      <button class="active" data-tab="dashboard">Dashboard</button>
+      <button data-tab="vpn">VPN</button>
+      <button data-tab="security">Security</button>
+      <button data-tab="wifi">Wi-Fi</button>
+      <button data-tab="system">System</button>
+      <button data-tab="display">Display</button>
+      <button data-tab="logs">Logs</button>
+    </nav>
+
+    <section class="tab-panel active" id="tab-dashboard">
+      <div class="dashboard">
+        <article class="panel primary">
+          <div class="panel-head">
+            <h2>VPN</h2>
+            <span id="vpnState">Checking...</span>
+          </div>
+          <div class="vpn-meter" id="vpnMeter">
+            <span id="vpnBig">...</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Profile</dt><dd id="profile">--</dd></div>
+            <div><dt>TUN</dt><dd id="tunIp">--</dd></div>
+            <div><dt>Public IP</dt><dd id="publicIp">--</dd></div>
+          </dl>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>LTE</h2>
+            <span id="netMode">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>WAN</dt><dd id="wanIp">--</dd></div>
+            <div><dt>Gateway</dt><dd id="gateway">--</dd></div>
+            <div><dt>Clients</dt><dd id="clients">--</dd></div>
+            <div><dt>Uptime</dt><dd id="uptime">--</dd></div>
+          </dl>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Security</h2>
+            <span id="securityState">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>TP-Link Block</dt><dd id="privacyLine">--</dd></div>
+            <div><dt>WPS</dt><dd id="wpsLine">--</dd></div>
+            <div><dt>Telnet</dt><dd id="telnetLine">--</dd></div>
+            <div><dt>Client Isolation</dt><dd id="isolationLine">--</dd></div>
+          </dl>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>System</h2>
+            <span id="adbState">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Battery</dt><dd id="battery">--</dd></div>
+            <div><dt>OpenVPN</dt><dd id="openvpnProc">--</dd></div>
+            <div><dt>Token</dt><dd id="tokenState">--</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-vpn">
+      <div class="dashboard two">
+        <article class="panel primary">
+          <div class="panel-head">
+            <h2>VPN Control</h2>
+            <span id="vpnStateVpn">--</span>
+          </div>
+          <div class="actions">
+            <button class="ok" data-action="start">Start</button>
+            <button class="warn" data-action="restart">Restart</button>
+            <button class="danger" data-action="stop">Stop</button>
+          </div>
+          <div class="profile-switch" aria-label="VPN profile">
+            <button data-profile="udp">UDP</button>
+            <button data-profile="tcp">TCP</button>
+          </div>
+          <div class="actions single">
+            <button id="checkIp">Check IP</button>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>VPN Details</h2>
+            <span id="profileVpn">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>TUN</dt><dd id="tunIpVpn">--</dd></div>
+            <div><dt>WAN</dt><dd id="wanIpVpn">--</dd></div>
+            <div><dt>Public IP</dt><dd id="publicIpVpn">--</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-security">
+      <div class="dashboard two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Hardening</h2>
+            <span id="securityStateDetail">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Telnet</dt><dd id="telnetPort">--</dd></div>
+            <div><dt>UPnP</dt><dd id="upnpPort">--</dd></div>
+            <div><dt>WPS Port</dt><dd id="wpsPort">--</dd></div>
+            <div><dt>AT Port Block</dt><dd id="atfwdBlock">--</dd></div>
+          </dl>
+          <div class="actions single">
+            <button id="applyHardening">Apply Hardening</button>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Privacy</h2>
+            <span id="privacyState">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Password on Display</dt><dd id="displayPass">--</dd></div>
+            <div><dt>Client Isolation</dt><dd id="apIsolation">--</dd></div>
+            <div><dt>TP-Link Block</dt><dd id="privacyStateDetail">--</dd></div>
+          </dl>
+          <div class="actions compact">
+            <button data-privacy="block">Block</button>
+            <button data-privacy="unblock">Unblock</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-wifi">
+      <div class="dashboard two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Wi-Fi</h2>
+            <span id="ssidState">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>SSID</dt><dd id="ssid">--</dd></div>
+            <div><dt>Hidden</dt><dd id="hiddenSsid">--</dd></div>
+            <div><dt>Security</dt><dd id="encryptType">--</dd></div>
+            <div><dt>Max Clients</dt><dd id="maxClients">--</dd></div>
+          </dl>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Active Clients</h2>
+            <span id="clientCountLine">--</span>
+          </div>
+          <div class="client-list" id="clientList">--</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-system">
+      <div class="dashboard two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Power</h2>
+            <span id="batterySystem">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Battery</dt><dd id="batteryDetail">--</dd></div>
+            <div><dt>ADB</dt><dd id="adbStateDetail">--</dd></div>
+          </dl>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Storage</h2>
+            <span id="storageState">--</span>
+          </div>
+          <dl class="stats wide">
+            <div><dt>usrdata</dt><dd id="storageUsr">--</dd></div>
+            <div><dt>root</dt><dd id="storageRoot">--</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-display">
+      <div class="dashboard two">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Display</h2>
+            <span>OLED/LCD</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Restore Backup</dt><dd>/usrdata/vpn/oled_res.gg_backup</dd></div>
+            <div><dt>VPN Lock Icon</dt><dd>planned</dd></div>
+            <div><dt>Boot Resource</dt><dd>4000 test slot</dd></div>
+          </dl>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Safe Commands</h2>
+            <span>ADB</span>
+          </div>
+          <pre class="mini-code">powershell -ExecutionPolicy Bypass -File .\deploy_display_test.ps1 -Action backup
+powershell -ExecutionPolicy Bypass -File .\deploy_display_test.ps1 -Action restore</pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="tab-logs">
+      <section class="logs">
+        <div class="panel-head">
+          <h2>OpenVPN Log</h2>
+          <div class="log-actions">
+            <button id="refreshLog">Refresh</button>
+            <button id="clearLog">Clear</button>
+          </div>
+        </div>
+        <pre id="logOutput">Loading...</pre>
+      </section>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

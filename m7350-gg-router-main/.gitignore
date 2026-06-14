@@ -1,0 +1,26 @@
+# Generated resource exports and patched firmware/resource files
+export_fullscreen/
+export_boot_spinner/
+export_all/
+device_backup/
+device_backup_*/
+*.bmp
+export_*_contact_sheet.png
+oled_res_patched*
+
+# Local secrets and device extracts
+local_vpn_profiles/
+*.key
+auth.txt
+surfshark_auth.txt
+client.crt
+ca.crt
+*.ovpn
+oled_res
+gg_logo.raw
+openvpn
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
+*.tmp
