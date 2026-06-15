@@ -69,6 +69,17 @@ add_local_hardening_rules() {
     iptables -I INPUT 1 -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null
 }
 
+# IPv6 komplett deaktivieren: verhindert IPv6-Leaks am VPN vorbei.
+# LAN-Clients koennen kein IPv6 nutzen; Mobilfunk-Interface sendet kein IPv6.
+disable_ipv6() {
+  for iface in all default rmnet_data0 rmnet_data1 rmnet_data2 bridge0 wlan0; do
+    echo 1 > /proc/sys/net/ipv6/conf/$iface/disable_ipv6 2>/dev/null
+  done
+  ip6tables -P INPUT DROP 2>/dev/null
+  ip6tables -P FORWARD DROP 2>/dev/null
+  ip6tables -P OUTPUT DROP 2>/dev/null
+}
+
 start_oled_daemon() {
   if [ -x "$VPN_DIR/gg_oled.sh" ]; then
     killall gg_oled.sh 2>/dev/null
@@ -80,6 +91,7 @@ start_vpn() {
   mkdir -p "$VPN_DIR"
   harden_router_runtime
   enforce_kill_switch
+  disable_ipv6
   fix_dns_leak
   add_ttl_rule
   add_masquerade_rules

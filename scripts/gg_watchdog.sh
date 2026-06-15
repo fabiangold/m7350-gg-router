@@ -21,7 +21,18 @@ enforce_kill_switch() {
   iptables -C FORWARD -i bridge0 -o rmnet+ -j DROP 2>/dev/null || \
     iptables -I FORWARD 1 -i bridge0 -o rmnet+ -j DROP 2>/dev/null
 }
+
+disable_ipv6() {
+  for iface in all default rmnet_data0 rmnet_data1 rmnet_data2 bridge0 wlan0; do
+    echo 1 > /proc/sys/net/ipv6/conf/$iface/disable_ipv6 2>/dev/null
+  done
+  ip6tables -P INPUT DROP 2>/dev/null
+  ip6tables -P FORWARD DROP 2>/dev/null
+  ip6tables -P OUTPUT DROP 2>/dev/null
+}
+
 enforce_kill_switch
+disable_ipv6
 
 # ISP-Name auf GGRouter halten (patcht volatile UCI nach jedem mobile-daemon Reset)
 ISP_FILE="/var/volatile/tmp/.uci/isp_profile"
