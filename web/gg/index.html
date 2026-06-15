@@ -3,17 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GG Router Admin</title>
+  <title>GGrid46 Router</title>
+  <link rel="icon" href="/images/favicon.png">
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
       <div class="brand">
-        <div class="mark">GG</div>
+        <div class="mark">
+          <img src="/images/logo_small.png" alt="GG" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+          <span class="mark-fallback" style="display:none">GG</span>
+        </div>
         <div>
-          <h1>GG Router</h1>
-          <p id="deviceLine">M7350 Admin Panel</p>
+          <h1>GGrid46</h1>
+          <p class="brand-sub" id="deviceLine">Privacy Router · M7350</p>
         </div>
       </div>
       <div class="status-stack">
@@ -28,6 +32,7 @@
       <button data-tab="security">Sicherheit</button>
       <button data-tab="wifi">Wi-Fi</button>
       <button data-tab="system">System</button>
+      <button data-tab="sd">SD Karte</button>
       <button data-tab="display">Anzeige</button>
       <button data-tab="logs">Logs</button>
     </nav>
@@ -207,12 +212,68 @@
       </div>
     </section>
 
+    <section class="tab-panel" id="tab-sd">
+      <div class="dashboard two">
+        <article class="panel primary">
+          <div class="panel-head">
+            <h2>SD Karte</h2>
+            <span>Status</span>
+          </div>
+          <div class="sd-status">
+            <div class="sd-dot"></div>
+            <span>Keine SD Karte eingesteckt</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Einhaengepunkt</dt><dd>/mnt/sd</dd></div>
+            <div><dt>Dateisystem</dt><dd>ext4 / exFAT</dd></div>
+            <div><dt>Empfohlene Groesse</dt><dd>≥ 8 GB</dd></div>
+          </dl>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Geplante Nutzung</h2>
+            <span>Roadmap</span>
+          </div>
+          <div class="sd-plan-list">
+            <div class="sd-plan-item">
+              <span class="tag soon">Bald</span>
+              <div>
+                <strong>Persistente Logs</strong>
+                <p>VPN- und Watchdog-Logs auf SD statt NAND — kein Flash-Verschleiss, kein Datenverlust nach Reboot.</p>
+              </div>
+            </div>
+            <div class="sd-plan-item">
+              <span class="tag soon">Bald</span>
+              <div>
+                <strong>VPN Profile</strong>
+                <p>Alle .ovpn Profile auf SD — einfacher Wechsel ohne ADB oder Reboot.</p>
+              </div>
+            </div>
+            <div class="sd-plan-item">
+              <span class="tag">Geplant</span>
+              <div>
+                <strong>usrdata Backup</strong>
+                <p>Automatisches taeglisches Backup von /usrdata/vpn/ auf die SD Karte.</p>
+              </div>
+            </div>
+            <div class="sd-plan-item">
+              <span class="tag">Geplant</span>
+              <div>
+                <strong>Erweiterter Speicher</strong>
+                <p>OpenVPN Binary, zusaetzliche Tools und Konfigurationen auf SD auslagern.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="tab-panel" id="tab-display">
       <div class="dashboard two">
         <article class="panel">
           <div class="panel-head">
             <h2>Anzeige</h2>
-            <span>OLED/LCD</span>
+            <span>LCD</span>
           </div>
           <dl class="stats">
             <div><dt>Backup Restore</dt><dd>/usrdata/vpn/oled_res.gg_backup</dd></div>
