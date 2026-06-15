@@ -34,6 +34,14 @@ disable_ipv6() {
 enforce_kill_switch
 disable_ipv6
 
+# WebUI nur vom LAN erreichbar, nicht vom Mobilfunknetz
+iptables -C INPUT -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null || \
+  iptables -I INPUT 1 -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null
+iptables -C INPUT -i rmnet+ -p tcp --dport 443 -j DROP 2>/dev/null || \
+  iptables -I INPUT 1 -i rmnet+ -p tcp --dport 443 -j DROP 2>/dev/null
+iptables -C INPUT -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null || \
+  iptables -I INPUT 1 -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null
+
 # ISP-Name auf GGRouter halten (patcht volatile UCI nach jedem mobile-daemon Reset)
 ISP_FILE="/var/volatile/tmp/.uci/isp_profile"
 if [ -f "$ISP_FILE" ] && grep -q 'isp_name=O2' "$ISP_FILE" 2>/dev/null; then

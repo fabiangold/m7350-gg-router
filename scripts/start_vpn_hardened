@@ -67,6 +67,13 @@ add_local_hardening_rules() {
     iptables -I INPUT 1 -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null
   iptables -C INPUT -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null || \
     iptables -I INPUT 1 -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null
+  # WebUI (80/443) nur vom LAN erreichbar, nicht vom Mobilfunknetz
+  iptables -C INPUT -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null || \
+    iptables -I INPUT 1 -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null
+  iptables -C INPUT -i rmnet+ -p tcp --dport 443 -j DROP 2>/dev/null || \
+    iptables -I INPUT 1 -i rmnet+ -p tcp --dport 443 -j DROP 2>/dev/null
+  iptables -C INPUT -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null || \
+    iptables -I INPUT 1 -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null
 }
 
 # IPv6 komplett deaktivieren: verhindert IPv6-Leaks am VPN vorbei.
