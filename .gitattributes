@@ -1,8 +1,17 @@
+* text=auto
+
+.gitattributes text eol=lf
+.gitignore text eol=lf
 *.sh text eol=lf
+*.pl text eol=lf
 scripts/start_vpn_hardened text eol=lf
+scripts/start_gg_web text eol=lf
 web/cgi-bin/* text eol=lf
 *.ps1 text eol=crlf
 *.html text eol=lf
 *.css text eol=lf
 *.js text eol=lf
 *.md text eol=lf
+*.raw binary
+*.bmp binary
+oled_res_device binary

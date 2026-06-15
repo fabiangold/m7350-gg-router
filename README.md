@@ -1,4 +1,8 @@
-# m7350-gg-router`r`n`r`nGet Rid off TP-Links Softwarelimits.`r`n`r`n## TP-Link M7350 V9 Modding Toolkit
+# m7350-gg-router
+
+Get rid of TP-Links Softwarelimits.
+
+## TP-Link M7350 V9 Modding Toolkit
 
 Dieses Workspace-Toolkit arbeitet lokal mit Kopien deiner Dateien. Es ueberschreibt weder die Desktop-Originale noch Dateien auf dem MiFi.
 
@@ -104,7 +108,7 @@ adb shell "echo 'DEIN_TOKEN' > /usrdata/vpn/web_token"
 
 ## VPN Profilstruktur
 
-Die gehärteten Skripte erwarten:
+Die gehaerteten Skripte erwarten:
 
 ```text
 /usrdata/vpn/openvpn
@@ -150,6 +154,53 @@ adb push .\scripts\unblock_tplink_cloud.sh /usrdata/vpn/unblock_tplink_cloud.sh
 adb shell "chmod +x /usrdata/vpn/unblock_tplink_cloud.sh"
 adb shell "/usrdata/vpn/unblock_tplink_cloud.sh"
 ```
+
+## TP-Link Logos durch GG Logos ersetzen
+
+Die originale Weboberflaeche liegt auf einem read-only Rootfs. Web-Logos werden deshalb nicht direkt ueberschrieben,
+sondern aus `/usrdata/www/images` per Bind-Mount ueber die Originaldateien gelegt:
+
+- `/WEBSERVER/www/images/logo_small.png`
+- `/WEBSERVER/www/images/logo_big.png`
+- `/WEBSERVER/www/images/phone/logo.png`
+- `/WEBSERVER/www/images/app.png`
+- `/WEBSERVER/www/images/phone/app.png`
+Zusaetzlich werden `login.html` und `phoneIndex.html` aus `/usrdata/www/root` ueberlagert, damit das eingebettete
+TP-Link-Favicon verschwindet. Das Favicon zeigt danach ebenfalls auf `images/logo_small.png`.
+
+Die OLED/LCD-Logos sitzen in `/etc/oled_res`. Die verbleibenden TP-Link-Wortmarken sind die Ressourcen:
+
+- `2415` - 38x14 Pixel
+- `2416` - 81x30 Pixel
+
+GG-Logo-Assets erzeugen:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\create_gg_logo_assets.ps1
+```
+
+Web-Logos deployen und OLED-Patch nur vorbereiten:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_tplink_logos.ps1
+```
+
+Wenn `adb` nicht im PATH liegt:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_tplink_logos.ps1 `
+  -AdbPath C:\Users\Dell\Desktop\LinageOS-Samsung\adb.exe
+```
+
+OLED-Logos wirklich in `/etc/oled_res` installieren:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\deploy_tplink_logos.ps1 `
+  -AdbPath C:\Users\Dell\Desktop\LinageOS-Samsung\adb.exe `
+  -ApplyOled
+```
+
+Das Skript sichert vorher automatisch die aktive Datei nach `/usrdata/vpn/oled_res.before_gg_logo_*`.
 
 ## Eigenes Webinterface
 

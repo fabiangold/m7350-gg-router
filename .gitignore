@@ -1,7 +1,9 @@
 # Generated resource exports and patched firmware/resource files
 export_fullscreen/
+export_fullscreen_*/
 export_boot_spinner/
 export_all/
+export_all_*/
 device_backup/
 device_backup_*/
 *.bmp

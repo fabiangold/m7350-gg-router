@@ -1,0 +1,59 @@
+#!/bin/sh
+
+GG_SRC="/usrdata/www"
+GG_WEB="/WEBSERVER/www/gg"
+GG_CGI="/WEBSERVER/www/cgi-bin"
+GG_IMG="/usrdata/www/images"
+WEB_IMG="/WEBSERVER/www/images"
+GG_ROOT="$GG_SRC/root"
+WEB_ROOT="/WEBSERVER/www"
+CGI_SCRIPTS="gg_common.sh gg_status.sh gg_vpn.sh gg_privacy.sh gg_security.sh"
+LOGO_FILES="logo_small.png logo_big.png phone/logo.png favicon.png app.png phone/app.png"
+ROOT_FILES="login.html phoneIndex.html"
+
+do_mount() {
+    if [ -d "$GG_SRC/gg" ] && [ -d "$GG_WEB" ]; then
+        mount --bind "$GG_SRC/gg" "$GG_WEB"
+    fi
+    for f in $CGI_SCRIPTS; do
+        src="$GG_SRC/cgi-bin/$f"
+        dst="$GG_CGI/$f"
+        if [ -f "$src" ] && [ -f "$dst" ]; then
+            mount --bind "$src" "$dst"
+        fi
+    done
+    for f in $LOGO_FILES; do
+        src="$GG_IMG/$f"
+        dst="$WEB_IMG/$f"
+        if [ -f "$src" ] && [ -f "$dst" ]; then
+            mount --bind "$src" "$dst"
+        fi
+    done
+    for f in $ROOT_FILES; do
+        src="$GG_ROOT/$f"
+        dst="$WEB_ROOT/$f"
+        if [ -f "$src" ] && [ -f "$dst" ]; then
+            mount --bind "$src" "$dst"
+        fi
+    done
+}
+
+do_umount() {
+    for f in $ROOT_FILES; do
+        umount "$WEB_ROOT/$f" 2>/dev/null || true
+    done
+    for f in $LOGO_FILES; do
+        umount "$WEB_IMG/$f" 2>/dev/null || true
+    done
+    for f in $CGI_SCRIPTS; do
+        umount "$GG_CGI/$f" 2>/dev/null || true
+    done
+    umount "$GG_WEB" 2>/dev/null || true
+}
+
+case "$1" in
+    start) do_mount ;;
+    stop)  do_umount ;;
+    restart) do_umount; do_mount ;;
+    *) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac

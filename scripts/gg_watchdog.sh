@@ -14,6 +14,15 @@ rotate_log() {
 rotate_log "$LOG" "$MAX_LOG"
 rotate_log "$VPN_LOG" "$MAX_VPN_LOG"
 
+# Kill-Switch IMMER erzwingen (TP-Link netManager loescht ihn nach iptables-Reset).
+# Strategie: als erste Regel in FORWARD einfuegen, sodass bridge0->rmnet+ immer geblockt ist.
+# Beim VPN-An laeuft Traffic ueber tun0 (MASQUERADE), nicht direkt ueber rmnet+.
+enforce_kill_switch() {
+  iptables -C FORWARD -i bridge0 -o rmnet+ -j DROP 2>/dev/null || \
+    iptables -I FORWARD 1 -i bridge0 -o rmnet+ -j DROP 2>/dev/null
+}
+enforce_kill_switch
+
 # ISP-Name auf GGRouter halten (patcht volatile UCI nach jedem mobile-daemon Reset)
 ISP_FILE="/var/volatile/tmp/.uci/isp_profile"
 if [ -f "$ISP_FILE" ] && grep -q 'isp_name=O2' "$ISP_FILE" 2>/dev/null; then
@@ -22,7 +31,7 @@ if [ -f "$ISP_FILE" ] && grep -q 'isp_name=O2' "$ISP_FILE" 2>/dev/null; then
 fi
 
 if [ -f "/tmp/gg_vpn_disabled" ]; then
-  : # VPN wurde bewusst ausgeschaltet (Taste/Web) -> nicht neu starten. Kill-Switch bleibt scharf.
+  # VPN bewusst ausgeschaltet -> nicht neu starten, Kill-Switch bleibt (oben schon gesetzt).
   : > "$PIP_CACHE"
 elif ! ip addr show tun0 >/dev/null 2>&1; then
   echo "$(date '+%Y-%m-%d %H:%M:%S') tun0 down, restarting VPN" >> "$LOG"

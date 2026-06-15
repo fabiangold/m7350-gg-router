@@ -1,6 +1,7 @@
 param(
     [string]$Token = "",
-    [switch]$SetToken
+    [switch]$SetToken,
+    [string]$AdbPath = "adb"
 )
 
 Set-StrictMode -Version Latest
@@ -14,16 +15,27 @@ $watchdogScript = Join-Path $root "scripts\gg_watchdog.sh"
 $oledScript     = Join-Path $root "scripts\gg_oled.sh"
 $oledOnRaw      = Join-Path $root "assets\oled_vpn_on.raw"
 $oledOffRaw     = Join-Path $root "assets\oled_vpn_off.raw"
+$logoSmall      = Join-Path $root "assets\web\logo_small.png"
+$logoBig        = Join-Path $root "assets\web\logo_big.png"
+$logoPhone      = Join-Path $root "assets\web\phone\logo.png"
+$favicon        = Join-Path $root "assets\web\favicon.png"
+$appImage       = Join-Path $root "assets\web\app.png"
+$phoneAppImage  = Join-Path $root "assets\web\phone\app.png"
 
-function Run-Adb([string[]]$Args) {
-    & adb @Args
+function Run-Adb {
+    param([Parameter(ValueFromRemainingArguments = $true)][object[]]$AdbArgs)
+    if ($AdbArgs.Count -eq 1 -and $AdbArgs[0] -is [array]) {
+        $AdbArgs = @($AdbArgs[0])
+    }
+    $flatArgs = @($AdbArgs | ForEach-Object { [string]$_ })
+    & $AdbPath @flatArgs
     if ($LASTEXITCODE -ne 0) {
-        throw "adb failed: adb $($Args -join ' ')"
+        throw "adb failed: $AdbPath $($flatArgs -join ' ')"
     }
 }
 
 # Zielverzeichnisse auf /usrdata (persistenter rw-Bereich)
-Run-Adb @("shell", "mkdir -p /usrdata/www/gg /usrdata/www/cgi-bin /usrdata/vpn")
+Run-Adb @("shell", "mkdir -p /usrdata/www/gg /usrdata/www/cgi-bin /usrdata/www/images/phone /usrdata/vpn")
 
 # Web UI nach /usrdata pushen
 Run-Adb @("push", (Join-Path $webRoot "gg\index.html"), "/usrdata/www/gg/index.html")
@@ -72,6 +84,26 @@ if (Test-Path $oledOnRaw) {
 }
 if (Test-Path $oledOffRaw) {
     Run-Adb @("push", $oledOffRaw, "/usrdata/vpn/oled_vpn_off.raw")
+}
+
+# Optionale Branding-Overrides fuer die originale TP-Link-Weboberflaeche.
+if (Test-Path $logoSmall) {
+    Run-Adb @("push", $logoSmall, "/usrdata/www/images/logo_small.png")
+}
+if (Test-Path $logoBig) {
+    Run-Adb @("push", $logoBig, "/usrdata/www/images/logo_big.png")
+}
+if (Test-Path $logoPhone) {
+    Run-Adb @("push", $logoPhone, "/usrdata/www/images/phone/logo.png")
+}
+if (Test-Path $favicon) {
+    Run-Adb @("push", $favicon, "/usrdata/www/images/favicon.png")
+}
+if (Test-Path $appImage) {
+    Run-Adb @("push", $appImage, "/usrdata/www/images/app.png")
+}
+if (Test-Path $phoneAppImage) {
+    Run-Adb @("push", $phoneAppImage, "/usrdata/www/images/phone/app.png")
 }
 
 # Bind-Mounts sofort aktivieren (ohne Neustart)
