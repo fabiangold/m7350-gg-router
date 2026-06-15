@@ -18,8 +18,12 @@ apply_hardening() {
   ps w 2>/dev/null | grep 'busybox telnetd' | grep -v grep | awk '{print $1}' | while read pid; do
     kill "$pid" 2>/dev/null
   done
-  killall upnpd 2>/dev/null
-  killall wscd 2>/dev/null
+  for proc in upnpd wscd; do
+    killall "$proc" 2>/dev/null
+    pidof "$proc" 2>/dev/null | tr ' ' '\n' | while read pid; do
+      [ -n "$pid" ] && kill -9 "$pid" 2>/dev/null
+    done
+  done
 
   iptables -C INPUT -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null || \
     iptables -I INPUT 1 -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null

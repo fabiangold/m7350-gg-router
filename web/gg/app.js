@@ -39,6 +39,18 @@
     el.title = text;
   }
 
+  function setBadge(id, tone) {
+    var el = qs(id);
+    if (!el) return;
+    el.className = tone ? "value-badge " + tone : "";
+  }
+
+  function portTone(value) {
+    if (value === "closed" || value === "off" || value === "0") return "good";
+    if (value === "open" || value === "on" || value === "1") return "bad";
+    return "";
+  }
+
   function onOff(value) {
     if (value === "1" || value === "on" || value === "open") return "on";
     if (value === "0" || value === "off" || value === "closed") return "off";
@@ -90,8 +102,8 @@
     var connected = data.vpn === "CONNECTED";
     var sec = secureState(data);
 
-    setText("vpnState", connected ? "Connected" : "Disconnected");
-    setText("vpnStateVpn", connected ? "Connected" : "Disconnected");
+    setText("vpnState", connected ? "Verbunden" : "Getrennt");
+    setText("vpnStateVpn", connected ? "Verbunden" : "Getrennt");
     setText("vpnBig", connected ? "ON" : "OFF");
     setText("vpnPill", connected ? "VPN ON" : "VPN OFF");
     qs("vpnMeter").className = "vpn-meter " + (connected ? "on" : "off");
@@ -105,7 +117,7 @@
     setText("wanIpVpn", data.wan_ip);
     setText("gateway", data.gateway);
     setText("clients", data.clients);
-    setText("clientCountLine", (data.clients || "--") + " active");
+    setText("clientCountLine", (data.clients || "--") + " aktiv");
     setText("uptime", data.uptime);
     setText("netMode", data.net_mode);
     setText("battery", data.battery);
@@ -123,8 +135,8 @@
     setText("tokenState", data.token);
     setText("deviceLine", data.device || "M7350 Admin Panel");
 
-    setText("securityState", sec);
-    setText("securityStateDetail", sec);
+    setText("securityState", sec === "hardened" ? "OK" : "Pruefen");
+    setText("securityStateDetail", sec === "hardened" ? "OK" : "Pruefen");
     setText("wpsLine", onOff(data.wps_feature));
     setText("telnetLine", data.telnet_port);
     setText("isolationLine", onOff(data.ap_isolate));
@@ -141,6 +153,29 @@
     setText("encryptType", data.encrypt_type === "11" ? "WPA2" : data.encrypt_type);
     setText("maxClients", data.max_assoc_sta);
     renderClients(data.client_list);
+
+    setBadge("vpnState", connected ? "good" : "bad");
+    setBadge("vpnStateVpn", connected ? "good" : "bad");
+    setBadge("profile", data.profile && data.profile !== "unknown" ? "good" : "warn");
+    setBadge("profileVpn", data.profile && data.profile !== "unknown" ? "good" : "warn");
+    setBadge("securityState", sec === "hardened" ? "good" : "warn");
+    setBadge("securityStateDetail", sec === "hardened" ? "good" : "warn");
+    setBadge("privacyLine", data.privacy === "on" ? "good" : "warn");
+    setBadge("privacyState", data.privacy === "on" ? "good" : "warn");
+    setBadge("privacyStateDetail", data.privacy === "on" ? "good" : "warn");
+    setBadge("wpsLine", data.wps_feature === "0" ? "good" : "bad");
+    setBadge("isolationLine", data.ap_isolate === "1" ? "good" : "warn");
+    setBadge("telnetLine", portTone(data.telnet_port));
+    setBadge("telnetPort", portTone(data.telnet_port));
+    setBadge("upnpPort", portTone(data.upnp_port));
+    setBadge("wpsPort", portTone(data.wps_port));
+    setBadge("atfwdBlock", data.atfwd_block === "on" ? "good" : "warn");
+    setBadge("displayPass", data.show_passphrase === "0" ? "good" : "warn");
+    setBadge("apIsolation", data.ap_isolate === "1" ? "good" : "warn");
+    setBadge("openvpnProc", data.openvpn === "running" ? "good" : "bad");
+    setBadge("adbState", data.adb === "on" ? "warn" : "good");
+    setBadge("adbStateDetail", data.adb === "on" ? "warn" : "good");
+    setBadge("tokenState", data.token === "on" || data.token === "set" ? "good" : "warn");
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-profile]"), function (button) {
       button.className = button.getAttribute("data-profile") === data.profile ? "active" : "";
