@@ -19,6 +19,23 @@ wait_for_network() {
   return 0
 }
 
+randomize_wlan_mac() {
+  # Nur randomisieren wenn kein Client verbunden ist (verhindert Disconnect mitten in der Session).
+  # Lokal-administrierte MAC (bit1=1, bit0=0): b2:xx:xx:xx:xx:xx Format.
+  clients=$(iw dev wlan0 station dump 2>/dev/null | grep -c Station)
+  [ "${clients:-0}" -gt 0 ] && return 0
+  local new_mac
+  new_mac=$(cat /dev/urandom 2>/dev/null | head -c 6 | od -A n -t x1 | tr -d ' \n' | \
+    sed 's/\(..\)\(..\)\(..\)\(..\)\(..\)\(..\)/\1:\2:\3:\4:\5:\6/')
+  # LAA-Bit setzen (bit1 des ersten Bytes = lokal administriert, bit0 = unicast)
+  first=$(echo "$new_mac" | cut -d: -f1)
+  first=$(printf '%02x' $(( (0x$first | 0x02) & 0xFE )))
+  new_mac="${first}:$(echo "$new_mac" | cut -d: -f2-)"
+  ip link set wlan0 down 2>/dev/null
+  ip link set wlan0 address "$new_mac" 2>/dev/null
+  ip link set wlan0 up 2>/dev/null
+}
+
 harden_router_runtime() {
   chmod 700 "$OPENVPN" 2>/dev/null
   chmod 600 "$VPN_DIR/auth.txt" "$VPN_DIR/web_token" "$CONFIG" "$VPN_DIR"/profiles/*.ovpn 2>/dev/null
@@ -140,6 +157,7 @@ start_oled_daemon() {
 
 start_vpn() {
   mkdir -p "$VPN_DIR"
+  randomize_wlan_mac
   harden_router_runtime
   enforce_kill_switch
   disable_ipv6
