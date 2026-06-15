@@ -34,6 +34,11 @@ disable_ipv6() {
 enforce_kill_switch
 disable_ipv6
 
+# TP-Link Cloud Prozesse beenden (starten sich ggf. neu)
+for proc in cloud_brd cloud_client atfwd_daemon; do
+  pidof "$proc" >/dev/null 2>&1 && kill -9 $(pidof "$proc") 2>/dev/null
+done
+
 # WebUI nur vom LAN erreichbar, nicht vom Mobilfunknetz
 iptables -C INPUT -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null || \
   iptables -I INPUT 1 -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null
