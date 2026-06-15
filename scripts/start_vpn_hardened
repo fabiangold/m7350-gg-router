@@ -20,17 +20,16 @@ wait_for_network() {
 }
 
 randomize_wlan_mac() {
-  # Nur randomisieren wenn kein Client verbunden ist (verhindert Disconnect mitten in der Session).
-  # Lokal-administrierte MAC (bit1=1, bit0=0): b2:xx:xx:xx:xx:xx Format.
-  clients=$(iw dev wlan0 station dump 2>/dev/null | grep -c Station)
-  [ "${clients:-0}" -gt 0 ] && return 0
-  local new_mac
-  new_mac=$(cat /dev/urandom 2>/dev/null | head -c 6 | od -A n -t x1 | tr -d ' \n' | \
-    sed 's/\(..\)\(..\)\(..\)\(..\)\(..\)\(..\)/\1:\2:\3:\4:\5:\6/')
-  # LAA-Bit setzen (bit1 des ersten Bytes = lokal administriert, bit0 = unicast)
-  first=$(echo "$new_mac" | cut -d: -f1)
-  first=$(printf '%02x' $(( (0x$first | 0x02) & 0xFE )))
-  new_mac="${first}:$(echo "$new_mac" | cut -d: -f2-)"
+  # Nur randomisieren wenn kein Client verbunden (verhindert Disconnect mid-session).
+  # b2 als erster Byte: 0xb2 = 10110010 (bit0=0 unicast, bit1=1 lokal administriert).
+  clients=$(iw dev wlan0 station dump 2>/dev/null | grep -c Station || echo 0)
+  [ "$clients" -gt 0 ] && return 0
+  b2=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' \n')
+  b3=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' \n')
+  b4=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' \n')
+  b5=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' \n')
+  b6=$(dd if=/dev/urandom bs=1 count=1 2>/dev/null | od -An -tu1 | tr -d ' \n')
+  new_mac=$(printf 'b2:%02x:%02x:%02x:%02x:%02x' "$b2" "$b3" "$b4" "$b5" "$b6")
   ip link set wlan0 down 2>/dev/null
   ip link set wlan0 address "$new_mac" 2>/dev/null
   ip link set wlan0 up 2>/dev/null
