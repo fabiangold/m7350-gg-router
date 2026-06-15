@@ -74,6 +74,11 @@ add_local_hardening_rules() {
     iptables -I INPUT 1 -i rmnet+ -p tcp --dport 443 -j DROP 2>/dev/null
   iptables -C INPUT -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null || \
     iptables -I INPUT 1 -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null
+  # ADB-over-Network blockieren (USB-ADB bleibt; TCP-ADB waere Root-Shell aus dem Netz)
+  iptables -C INPUT -p tcp --dport 5555 -j DROP 2>/dev/null || \
+    iptables -I INPUT 1 -p tcp --dport 5555 -j DROP 2>/dev/null
+  # ADB TCP-Port deaktivieren (sicherheitshalber, falls irgendwas ihn aktiviert)
+  setprop service.adb.tcp.port -1 2>/dev/null || true
 }
 
 # IPv6 komplett deaktivieren: verhindert IPv6-Leaks am VPN vorbei.
