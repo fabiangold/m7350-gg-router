@@ -47,10 +47,12 @@ gen_token() {
 
 backup_create() {
   mkdir -p "$BACKUP_DIR"
+  chmod 700 "$BACKUP_DIR" 2>/dev/null || true
   ts=$(date +%Y%m%d_%H%M%S)
   dest="$BACKUP_DIR/gg_backup_${ts}.tar.gz"
   cd "$VPN_DIR" && tar czf "$dest" auth.txt web_token current_profile current.ovpn profiles/ 2>/dev/null
   if [ -f "$dest" ]; then
+    chmod 600 "$dest" 2>/dev/null || true
     echo "backup=$dest"
   else
     echo "error=backup failed"
@@ -97,7 +99,11 @@ case "$ACTION" in
     ;;
   status)
     echo "telnet=$(netstat -lnt 2>/dev/null | grep -q ':23 ' && echo open || echo closed)"
-    echo "upnp=$(netstat -lnu 2>/dev/null | grep -q ':1900 ' && echo open || echo closed)"
+    if netstat -lnu 2>/dev/null | grep -q ':1900 ' || pidof upnpd >/dev/null 2>&1; then
+      echo "upnp=open"
+    else
+      echo "upnp=closed"
+    fi
     echo "wps=$(netstat -lnt 2>/dev/null | grep -q ':52881 ' && echo open || echo closed)"
     echo "atfwd_block=$(iptables -S INPUT 2>/dev/null | grep -q -- '--dport 6609 -j DROP' && echo on || echo off)"
     ;;

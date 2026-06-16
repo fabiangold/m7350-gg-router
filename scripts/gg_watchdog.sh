@@ -27,11 +27,28 @@ enforce_kill_switch() {
 
 disable_ipv6() {
   for iface in all default rmnet_data0 rmnet_data1 rmnet_data2 bridge0 wlan0; do
-    echo 1 > /proc/sys/net/ipv6/conf/$iface/disable_ipv6 2>/dev/null
+    flag="/proc/sys/net/ipv6/conf/$iface/disable_ipv6"
+    [ -e "$flag" ] && echo 1 > "$flag" 2>/dev/null
   done
   ip6tables -P INPUT DROP 2>/dev/null
   ip6tables -P FORWARD DROP 2>/dev/null
   ip6tables -P OUTPUT DROP 2>/dev/null
+}
+
+kill_processes() {
+  for proc in "$@"; do
+    killall "$proc" 2>/dev/null
+    pidof "$proc" 2>/dev/null | tr ' ' '\n' | while read pid; do
+      [ -n "$pid" ] && kill -9 "$pid" 2>/dev/null
+    done
+  done
+}
+
+ensure_daemon() {
+  pattern="$1"
+  shift
+  pgrep -f "$pattern" >/dev/null 2>&1 && return
+  setsid "$@" < /dev/null > /dev/null 2>&1 &
 }
 
 enforce_kill_switch
@@ -42,10 +59,14 @@ SD_MOUNT="/usrdata/sd"
 grep -q "$SD_MOUNT" /proc/mounts 2>/dev/null || \
   mount -t vfat /dev/mmcblk0p1 "$SD_MOUNT" 2>/dev/null
 
-# TP-Link Cloud Prozesse beenden (starten sich ggf. neu)
-for proc in cloud_brd cloud_client atfwd_daemon; do
-  pidof "$proc" >/dev/null 2>&1 && kill -9 $(pidof "$proc") 2>/dev/null
-done
+# TP-Link/unsichere Dienste beenden (starten sich ggf. neu)
+kill_processes cloud_brd cloud_client atfwd_daemon upnpd wscd telnetd
+
+# GG-Daemons am Leben halten. Das passiert hier statt direkt in Cron,
+# damit pgrep nicht die Cron-Shell-Zeile selbst trifft.
+[ -f /usrdata/vpn/fb0_daemon2.pl ] && ensure_daemon '[f]b0_daemon2' perl /usrdata/vpn/fb0_daemon2.pl
+[ -f /usrdata/vpn/isp_daemon.pl ] && ensure_daemon '[i]sp_daemon.pl' perl /usrdata/vpn/isp_daemon.pl
+[ -f /usrdata/vpn/gg_vpn_button.pl ] && ensure_daemon '[g]g_vpn_button' perl /usrdata/vpn/gg_vpn_button.pl
 
 # WebUI nur vom LAN erreichbar, nicht vom Mobilfunknetz
 iptables -C INPUT -i rmnet+ -p tcp --dport 80 -j DROP 2>/dev/null || \

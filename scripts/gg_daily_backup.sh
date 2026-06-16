@@ -11,11 +11,13 @@ else
 fi
 
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR" 2>/dev/null || true
 ts=$(date +%Y%m%d_%H%M%S)
 dest="$BACKUP_DIR/gg_backup_${ts}.tar.gz"
 cd "$VPN_DIR" && tar czf "$dest" auth.txt web_token current_profile current.ovpn profiles/ 2>/dev/null
 
 if [ -f "$dest" ]; then
+  chmod 600 "$dest" 2>/dev/null || true
   echo "$(date '+%Y-%m-%d %H:%M:%S') daily backup: $dest" >> "$VPN_DIR/watchdog.log"
   # Aelteste Backups loeschen, nur die letzten $KEEP behalten
   ls -1t "$BACKUP_DIR"/gg_backup_*.tar.gz 2>/dev/null | tail -n +$((KEEP+1)) | while read f; do

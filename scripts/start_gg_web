@@ -19,7 +19,9 @@ do_mount() {
         src="$GG_SRC/cgi-bin/$f"
         dst="$GG_CGI/$f"
         if [ -f "$src" ] && [ -f "$dst" ]; then
+            chmod 755 "$src" 2>/dev/null || true
             mount --bind "$src" "$dst"
+            chmod 755 "$dst" 2>/dev/null || true
         fi
     done
     for f in $LOGO_FILES; do

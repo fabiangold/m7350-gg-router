@@ -52,7 +52,9 @@ max_assoc_sta="$(uci -c /data/config get wlan.basic_setting.max_assoc_sta 2>/dev
 telnet_port="closed"
 netstat -lnt 2>/dev/null | grep -q ':23 ' && telnet_port="open"
 upnp_port="closed"
-netstat -lnu 2>/dev/null | grep -q ':1900 ' && upnp_port="open"
+if netstat -lnu 2>/dev/null | grep -q ':1900 ' || pidof upnpd >/dev/null 2>&1; then
+  upnp_port="open"
+fi
 wps_port="closed"
 netstat -lnt 2>/dev/null | grep -q ':52881 ' && wps_port="open"
 atfwd_block="off"

@@ -1,0 +1,2 @@
+*/2 * * * * /usrdata/vpn/gg_watchdog.sh
+0 3 * * * /usrdata/vpn/gg_daily_backup.sh

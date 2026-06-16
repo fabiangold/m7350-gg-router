@@ -12,6 +12,8 @@ $webRoot = Join-Path $root "web"
 $initScript     = Join-Path $root "scripts\start_gg_web"
 $vpnScript      = Join-Path $root "scripts\vpn_hardened.sh"
 $watchdogScript = Join-Path $root "scripts\gg_watchdog.sh"
+$dailyBackupScript = Join-Path $root "scripts\gg_daily_backup.sh"
+$cronFile       = Join-Path $root "scripts\gg_crontab"
 $oledScript     = Join-Path $root "scripts\gg_oled.sh"
 $oledOnRaw      = Join-Path $root "assets\oled_vpn_on.raw"
 $oledOffRaw     = Join-Path $root "assets\oled_vpn_off.raw"
@@ -41,6 +43,7 @@ Run-Adb @("shell", "mkdir -p /usrdata/www/gg /usrdata/www/cgi-bin /usrdata/www/i
 Run-Adb @("push", (Join-Path $webRoot "gg\index.html"), "/usrdata/www/gg/index.html")
 Run-Adb @("push", (Join-Path $webRoot "gg\style.css"),  "/usrdata/www/gg/style.css")
 Run-Adb @("push", (Join-Path $webRoot "gg\app.js"),     "/usrdata/www/gg/app.js")
+Run-Adb @("shell", "chmod 755 /usrdata/www/gg; chmod 644 /usrdata/www/gg/index.html /usrdata/www/gg/style.css /usrdata/www/gg/app.js")
 
 # CGI-Scripts nach /usrdata pushen
 Run-Adb @("push", (Join-Path $webRoot "cgi-bin\gg_common.sh"),   "/usrdata/www/cgi-bin/gg_common.sh")
@@ -50,7 +53,7 @@ Run-Adb @("push", (Join-Path $webRoot "cgi-bin\gg_privacy.sh"),  "/usrdata/www/c
 if (Test-Path (Join-Path $webRoot "cgi-bin\gg_security.sh")) {
     Run-Adb @("push", (Join-Path $webRoot "cgi-bin\gg_security.sh"), "/usrdata/www/cgi-bin/gg_security.sh")
 }
-Run-Adb @("shell", "chmod +x /usrdata/www/cgi-bin/gg_*.sh")
+Run-Adb @("shell", "chmod 755 /usrdata/www/cgi-bin; chmod 755 /usrdata/www/cgi-bin/gg_*.sh")
 
 # Init-Script deployen und Symlink setzen (einmalig noetig)
 if (Test-Path $initScript) {
@@ -67,11 +70,21 @@ if (Test-Path $vpnScript) {
 }
 if (Test-Path $watchdogScript) {
     Run-Adb @("push", $watchdogScript, "/usrdata/vpn/gg_watchdog.sh")
-    Run-Adb @("shell", "chmod +x /usrdata/vpn/gg_watchdog.sh")
+    Run-Adb @("shell", "chmod 755 /usrdata/vpn/gg_watchdog.sh")
+}
+if (Test-Path $dailyBackupScript) {
+    Run-Adb @("push", $dailyBackupScript, "/usrdata/vpn/gg_daily_backup.sh")
+    Run-Adb @("shell", "chmod 755 /usrdata/vpn/gg_daily_backup.sh")
+}
+if (Test-Path $cronFile) {
+    Run-Adb @("push", $cronFile, "/tmp/gg_crontab")
     Run-Adb @("shell", "mkdir -p /etc/cron/crontabs")
-    Run-Adb @("shell", "echo '*/2 * * * * /usrdata/vpn/gg_watchdog.sh' > /etc/cron/crontabs/root")
+    Run-Adb @("shell", "mkdir -p /usrdata/etc/cron/crontabs /var/spool/cron/crontabs")
+    Run-Adb @("shell", "cp /tmp/gg_crontab /etc/cron/crontabs/root && cp /tmp/gg_crontab /usrdata/etc/cron/crontabs/root")
+    Run-Adb @("shell", "cp /tmp/gg_crontab /var/spool/cron/crontabs/root 2>/dev/null || true")
+    Run-Adb @("shell", "chmod 600 /etc/cron/crontabs/root /usrdata/etc/cron/crontabs/root 2>/dev/null || true")
     Run-Adb @("shell", "ln -sf /etc/init.d/busybox-cron /etc/rc5.d/S90gg_cron 2>/dev/null || true")
-    Run-Adb @("shell", "crond -c /etc/cron/crontabs -b 2>/dev/null || true")
+    Run-Adb @("shell", "/etc/init.d/busybox-cron restart 2>/dev/null || crond -c /etc/cron/crontabs -b 2>/dev/null || true")
 }
 
 # OLED daemon + status images

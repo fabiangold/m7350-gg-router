@@ -11,7 +11,14 @@
   var storedToken = "";
   try { storedToken = localStorage.getItem("gg_token") || ""; } catch(e) {}
   var token = queryToken || storedToken;
-  if (queryToken) { try { localStorage.setItem("gg_token", queryToken); } catch(e) {} }
+  if (queryToken) {
+    try { localStorage.setItem("gg_token", queryToken); } catch(e) {}
+    try {
+      var cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("token");
+      window.history.replaceState(null, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+    } catch(e) {}
+  }
 
   function showTokenOverlay() {
     var ov = document.getElementById("tokenOverlay");
