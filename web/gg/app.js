@@ -8,12 +8,42 @@
     queryToken = "";
   }
 
-  var token = queryToken || localStorage.getItem("gg_token") || "";
-  if (queryToken) localStorage.setItem("gg_token", queryToken);
-  if (!token) {
-    token = window.prompt("GG Router token, falls gesetzt:", "") || "";
-    if (token) localStorage.setItem("gg_token", token);
+  var storedToken = "";
+  try { storedToken = localStorage.getItem("gg_token") || ""; } catch(e) {}
+  var token = queryToken || storedToken;
+  if (queryToken) { try { localStorage.setItem("gg_token", queryToken); } catch(e) {} }
+
+  function showTokenOverlay() {
+    var ov = document.getElementById("tokenOverlay");
+    if (ov) ov.style.display = "flex";
   }
+
+  function hideTokenOverlay() {
+    var ov = document.getElementById("tokenOverlay");
+    if (ov) ov.style.display = "none";
+  }
+
+  function submitToken() {
+    var inp = document.getElementById("tokenInput");
+    if (!inp) return;
+    var val = inp.value.trim();
+    if (!val) return;
+    token = val;
+    try { localStorage.setItem("gg_token", val); } catch(e) {}
+    hideTokenOverlay();
+    refreshStatus();
+    refreshLog();
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    var btn = document.getElementById("tokenSubmit");
+    if (btn) btn.addEventListener("click", submitToken);
+    var inp = document.getElementById("tokenInput");
+    if (inp) inp.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") submitToken();
+    });
+    if (!token) showTokenOverlay();
+  });
 
   function qs(id) {
     return document.getElementById(id);

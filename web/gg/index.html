@@ -6,6 +6,67 @@
   <title>GGrid46 Router</title>
   <link rel="icon" href="/images/logo_small.png" type="image/png">
   <link rel="stylesheet" href="./style.css">
+  <style>
+    #tokenOverlay {
+      position: fixed; inset: 0; z-index: 999;
+      display: none;
+      align-items: center; justify-content: center;
+      background: rgba(3,6,10,.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .token-card {
+      width: min(360px, 90vw);
+      padding: 32px 28px 28px;
+      border: 1px solid rgba(0,232,122,.25);
+      border-radius: 14px;
+      background: linear-gradient(160deg, rgba(0,232,122,.06), transparent), #0a0f14;
+      box-shadow: 0 0 60px rgba(0,0,0,.6), 0 0 0 1px rgba(0,232,122,.08) inset;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .token-card-head {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .token-card-head .mark {
+      width: 44px; height: 44px; flex: 0 0 auto;
+    }
+    .token-card h2 {
+      font-size: 20px; font-weight: 800; letter-spacing: -.4px;
+      background: linear-gradient(120deg,#fff 40%,#00e87a 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 0;
+    }
+    .token-card p {
+      color: #7fa898; font-size: 13px; margin: 0;
+    }
+    #tokenInput {
+      width: 100%; padding: 11px 14px;
+      border: 1px solid rgba(0,232,122,.3);
+      border-radius: 8px;
+      background: rgba(0,232,122,.04);
+      color: #e8f5ef; font-size: 14px;
+      font-family: 'Fira Code','Cascadia Code','Courier New',monospace;
+      letter-spacing: .04em;
+      outline: none;
+      box-sizing: border-box;
+    }
+    #tokenInput:focus { border-color: rgba(0,232,122,.6); box-shadow: 0 0 0 3px rgba(0,232,122,.1); }
+    #tokenSubmit {
+      width: 100%; min-height: 44px;
+      background: rgba(0,232,122,.12);
+      border: 1px solid rgba(0,232,122,.4);
+      border-radius: 8px;
+      color: #00e87a; font-weight: 700; font-size: 14px;
+      cursor: pointer;
+    }
+    #tokenSubmit:hover { background: rgba(0,232,122,.2); }
+    #tokenClearBtn {
+      background: none; border: none; color: #506860;
+      font-size: 12px; cursor: pointer; padding: 0; text-align: center;
+    }
+    #tokenClearBtn:hover { color: #7fa898; }
+  </style>
 </head>
 <body>
   <main class="shell">
@@ -332,6 +393,25 @@ powershell -ExecutionPolicy Bypass -File .\deploy_display_test.ps1 -Action resto
       </section>
     </section>
   </main>
+
+  <div id="tokenOverlay">
+    <div class="token-card">
+      <div class="token-card-head">
+        <div class="mark">
+          <img src="/images/logo_small.png" alt="GG" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+          <span class="mark-fallback" style="display:none">GG</span>
+        </div>
+        <div>
+          <h2>GGrid46</h2>
+          <p>Privacy Router</p>
+        </div>
+      </div>
+      <p>Zugangstoken eingeben um fortzufahren.</p>
+      <input id="tokenInput" type="password" placeholder="Token..." autocomplete="off" spellcheck="false">
+      <button id="tokenSubmit">Anmelden</button>
+      <button id="tokenClearBtn" onclick="(function(){try{localStorage.removeItem('gg_token');}catch(e){}location.reload();})()">Token zuruecksetzen</button>
+    </div>
+  </div>
 
   <script src="./app.js"></script>
 </body>
