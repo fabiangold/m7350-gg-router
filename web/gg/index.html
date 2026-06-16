@@ -160,6 +160,19 @@
             <button data-privacy="unblock">Freigeben</button>
           </div>
         </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Web Token</h2>
+            <span id="tokenStateSec">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Token</dt><dd id="tokenStateLine">--</dd></div>
+          </dl>
+          <div class="actions single">
+            <button id="rotateToken" class="warn">Token rotieren</button>
+          </div>
+          <p id="newTokenBox" style="display:none;margin-top:12px;padding:10px;border:1px solid rgba(0,232,122,.3);border-radius:8px;background:rgba(0,232,122,.06);font-size:12px;word-break:break-all;line-height:1.6"></p>
+        </article>
       </div>
     </section>
 
@@ -188,7 +201,7 @@
     </section>
 
     <section class="tab-panel" id="tab-system">
-      <div class="dashboard two">
+      <div class="dashboard three">
         <article class="panel">
           <div class="panel-head">
             <h2>Power</h2>
@@ -208,6 +221,20 @@
             <div><dt>usrdata</dt><dd id="storageUsr">--</dd></div>
             <div><dt>root</dt><dd id="storageRoot">--</dd></div>
           </dl>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Backup</h2>
+            <span id="backupState">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Gesichert</dt><dd id="lastBackup">nie</dd></div>
+          </dl>
+          <div class="actions compact" style="margin-top:14px">
+            <button id="createBackup" class="ok">Sichern</button>
+            <button id="listBackups">Anzeigen</button>
+          </div>
+          <pre id="backupOutput" class="mini-code" style="display:none;min-height:60px;margin-top:12px"></pre>
         </article>
       </div>
     </section>

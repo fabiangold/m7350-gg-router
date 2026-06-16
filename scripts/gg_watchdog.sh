@@ -48,6 +48,10 @@ iptables -C INPUT -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null || \
   iptables -I INPUT 1 -i rmnet+ -p tcp --dport 8080 -j DROP 2>/dev/null
 iptables -C INPUT -p tcp --dport 5555 -j DROP 2>/dev/null || \
   iptables -I INPUT 1 -p tcp --dport 5555 -j DROP 2>/dev/null
+iptables -C INPUT -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null || \
+  iptables -I INPUT 1 -i bridge0 -p tcp --dport 23 -j DROP 2>/dev/null
+iptables -C INPUT -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null || \
+  iptables -I INPUT 1 -i bridge0 -p tcp --dport 6609 -j DROP 2>/dev/null
 
 # ISP-Name auf GGRouter halten (patcht volatile UCI nach jedem mobile-daemon Reset)
 ISP_FILE="/var/volatile/tmp/.uci/isp_profile"

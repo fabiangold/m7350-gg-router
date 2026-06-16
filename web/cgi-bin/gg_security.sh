@@ -5,6 +5,7 @@ print_header
 require_token
 
 ACTION="$(get_param action)"
+BACKUP_DIR="/usrdata/gg_backups"
 
 apply_hardening() {
   uci -c /data/config set wlan.basic_setting.show_passphrase_on_oled='0' 2>/dev/null
@@ -31,9 +32,62 @@ apply_hardening() {
   echo "Hardening applied."
 }
 
+gen_token() {
+  new_token=$(dd if=/dev/urandom bs=16 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n')
+  echo "$new_token" > "$TOKEN_FILE"
+  chmod 600 "$TOKEN_FILE" 2>/dev/null
+  echo "new_token=$new_token"
+}
+
+backup_create() {
+  mkdir -p "$BACKUP_DIR"
+  ts=$(date +%Y%m%d_%H%M%S)
+  dest="$BACKUP_DIR/gg_backup_${ts}.tar.gz"
+  cd "$VPN_DIR" && tar czf "$dest" auth.txt web_token current_profile current.ovpn profiles/ 2>/dev/null
+  if [ -f "$dest" ]; then
+    echo "backup=$dest"
+  else
+    echo "error=backup failed"
+  fi
+}
+
+backup_list() {
+  ls -1t "$BACKUP_DIR"/gg_backup_*.tar.gz 2>/dev/null | head -10 || echo "none"
+}
+
+backup_restore() {
+  name="$(basename "$(get_param file)")"
+  case "$name" in
+    gg_backup_*.tar.gz)
+      src="$BACKUP_DIR/$name"
+      if [ ! -f "$src" ]; then
+        echo "error=not found"
+        return
+      fi
+      cd "$VPN_DIR" && tar xzf "$src" 2>/dev/null && \
+        echo "ok=restored from $name" || echo "error=extract failed"
+      ;;
+    *)
+      echo "error=invalid filename"
+      ;;
+  esac
+}
+
 case "$ACTION" in
   harden)
     apply_hardening
+    ;;
+  gentoken)
+    gen_token
+    ;;
+  backup)
+    backup_create
+    ;;
+  backup_list)
+    backup_list
+    ;;
+  backup_restore)
+    backup_restore
     ;;
   status)
     echo "telnet=$(netstat -lnt 2>/dev/null | grep -q ':23 ' && echo open || echo closed)"

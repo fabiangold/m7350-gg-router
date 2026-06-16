@@ -176,6 +176,10 @@
     setBadge("adbState", data.adb === "on" ? "warn" : "good");
     setBadge("adbStateDetail", data.adb === "on" ? "warn" : "good");
     setBadge("tokenState", data.token === "on" || data.token === "set" ? "good" : "warn");
+    setText("tokenStateSec", data.token === "on" ? "aktiv" : "nicht gesetzt");
+    setText("tokenStateLine", data.token === "on" ? "gesetzt" : "fehlt");
+    setBadge("tokenStateSec", data.token === "on" ? "good" : "bad");
+    setBadge("tokenStateLine", data.token === "on" ? "good" : "bad");
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-profile]"), function (button) {
       button.className = button.getAttribute("data-profile") === data.profile ? "active" : "";
@@ -279,6 +283,59 @@
       .then(function (text) {
         qs("logOutput").textContent = text;
         setTimeout(refreshStatus, 800);
+      })
+      .finally(function () { button.disabled = false; });
+  });
+
+  qs("rotateToken").addEventListener("click", function () {
+    if (!window.confirm("Neuen zufälligen Token generieren? Der aktuelle Token wird ungültig.")) return;
+    var button = qs("rotateToken");
+    button.disabled = true;
+    api("gg_security.sh", { action: "gentoken" })
+      .then(function (text) {
+        var match = text.match(/new_token=([a-f0-9]+)/);
+        if (match) {
+          var newTok = match[1];
+          token = newTok;
+          localStorage.setItem("gg_token", newTok);
+          var box = qs("newTokenBox");
+          box.style.display = "block";
+          box.innerHTML = "<strong style='color:var(--green)'>Neuer Token (kopieren!):</strong><br>" + newTok;
+        } else {
+          qs("logOutput").textContent = text;
+        }
+      })
+      .finally(function () { button.disabled = false; });
+  });
+
+  qs("createBackup").addEventListener("click", function () {
+    var button = qs("createBackup");
+    button.disabled = true;
+    setText("backupState", "...");
+    api("gg_security.sh", { action: "backup" })
+      .then(function (text) {
+        var box = qs("backupOutput");
+        box.style.display = "block";
+        box.textContent = text;
+        var match = text.match(/backup=(.+)/);
+        if (match) {
+          setText("lastBackup", match[1].split("/").pop());
+          setText("backupState", "OK");
+        } else {
+          setText("backupState", "Fehler");
+        }
+      })
+      .finally(function () { button.disabled = false; });
+  });
+
+  qs("listBackups").addEventListener("click", function () {
+    var button = qs("listBackups");
+    button.disabled = true;
+    api("gg_security.sh", { action: "backup_list" })
+      .then(function (text) {
+        var box = qs("backupOutput");
+        box.style.display = "block";
+        box.textContent = text || "Keine Backups vorhanden.";
       })
       .finally(function () { button.disabled = false; });
   });
