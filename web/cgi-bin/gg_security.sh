@@ -5,7 +5,13 @@ print_header
 require_token
 
 ACTION="$(get_param action)"
-BACKUP_DIR="/usrdata/gg_backups"
+SD_BACKUP_DIR="/usrdata/sd/gg_backups"
+INT_BACKUP_DIR="/usrdata/gg_backups"
+if grep -q '/usrdata/sd' /proc/mounts 2>/dev/null; then
+  BACKUP_DIR="$SD_BACKUP_DIR"
+else
+  BACKUP_DIR="$INT_BACKUP_DIR"
+fi
 
 apply_hardening() {
   uci -c /data/config set wlan.basic_setting.show_passphrase_on_oled='0' 2>/dev/null

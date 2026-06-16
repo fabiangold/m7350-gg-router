@@ -37,6 +37,11 @@ disable_ipv6() {
 enforce_kill_switch
 disable_ipv6
 
+# SD-Karte einhaengen wenn vorhanden und noch nicht gemountet
+SD_MOUNT="/usrdata/sd"
+grep -q "$SD_MOUNT" /proc/mounts 2>/dev/null || \
+  mount -t vfat /dev/mmcblk0p1 "$SD_MOUNT" 2>/dev/null
+
 # TP-Link Cloud Prozesse beenden (starten sich ggf. neu)
 for proc in cloud_brd cloud_client atfwd_daemon; do
   pidof "$proc" >/dev/null 2>&1 && kill -9 $(pidof "$proc") 2>/dev/null
