@@ -1,5 +1,8 @@
 #!/bin/sh
 VPN_DIR="/usrdata/vpn"
+SURFSHARK_DNS1="162.252.172.57"
+SURFSHARK_DNS2="149.154.159.92"
+FALLBACK_DNS="1.1.1.1"
 LOG="$VPN_DIR/watchdog.log"
 VPN_LOG="$VPN_DIR/vpn.log"
 PIP_CACHE="/tmp/gg_public_ip"
@@ -60,6 +63,16 @@ if [ -f "$ISP_FILE" ] && grep -q 'isp_name=O2' "$ISP_FILE" 2>/dev/null; then
   kill -TERM "$(ps | grep '/usr/bin/oledd' | grep -v grep | awk '{print $1}')" 2>/dev/null
 fi
 
+set_dns_dnat() {
+  local target="$1"
+  iptables -t nat -D PREROUTING -i bridge0 -p udp --dport 53 -j DNAT --to "$SURFSHARK_DNS1" 2>/dev/null
+  iptables -t nat -D PREROUTING -i bridge0 -p tcp --dport 53 -j DNAT --to "$SURFSHARK_DNS1" 2>/dev/null
+  iptables -t nat -D PREROUTING -i bridge0 -p udp --dport 53 -j DNAT --to "$FALLBACK_DNS" 2>/dev/null
+  iptables -t nat -D PREROUTING -i bridge0 -p tcp --dport 53 -j DNAT --to "$FALLBACK_DNS" 2>/dev/null
+  iptables -t nat -I PREROUTING 1 -i bridge0 -p udp --dport 53 -j DNAT --to "$target" 2>/dev/null
+  iptables -t nat -I PREROUTING 1 -i bridge0 -p tcp --dport 53 -j DNAT --to "$target" 2>/dev/null
+}
+
 if [ -f "/tmp/gg_vpn_disabled" ]; then
   # VPN bewusst ausgeschaltet -> nicht neu starten, Kill-Switch bleibt (oben schon gesetzt).
   : > "$PIP_CACHE"
@@ -68,9 +81,11 @@ elif ! ip addr show tun0 >/dev/null 2>&1; then
   /etc/init.d/start_vpn restart >> "$LOG" 2>&1 &
   : > "$PIP_CACHE"
 else
-  grep -q '1.1.1.1' /etc/resolv.conf 2>/dev/null || {
-    echo "nameserver 1.1.1.1" > /etc/resolv.conf
-    echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+  # VPN laeuft: Surfshark-DNS sicherstellen (verhaelt sich wie DNAT-Ziel-Check)
+  grep -q "$SURFSHARK_DNS1" /etc/resolv.conf 2>/dev/null || {
+    echo "nameserver $SURFSHARK_DNS1" > /etc/resolv.conf
+    echo "nameserver $SURFSHARK_DNS2" >> /etc/resolv.conf
+    set_dns_dnat "$SURFSHARK_DNS1"
   }
   pip="$(wget -q -T 5 -O - http://ifconfig.me/ip 2>/dev/null)"
   [ -z "$pip" ] && pip="$(wget -q -T 5 -O - http://api.ipify.org 2>/dev/null)"
