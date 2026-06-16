@@ -15,7 +15,7 @@ require_token() {
     expected="$(cat "$TOKEN_FILE")"
     token="$(get_param token)"
     if [ -z "$token" ] || [ "$token" != "$expected" ]; then
-      echo "FORBIDDEN"
+      printf "Status: 403 Forbidden\r\nContent-type: text/plain\r\n\r\nFORBIDDEN\n"
       exit 0
     fi
   fi

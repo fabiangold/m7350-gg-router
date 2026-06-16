@@ -1,8 +1,8 @@
 #!/bin/sh
 
 . /WEBSERVER/www/cgi-bin/gg_common.sh
-print_header
 require_token
+print_header
 
 vpn="DISCONNECTED"
 ip addr show tun0 >/dev/null 2>&1 && vpn="CONNECTED"

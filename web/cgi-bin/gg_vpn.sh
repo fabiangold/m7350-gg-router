@@ -1,8 +1,8 @@
 #!/bin/sh
 
 . /WEBSERVER/www/cgi-bin/gg_common.sh
-print_header
 require_token
+print_header
 
 ACTION="$(get_param action)"
 PROFILE="$(get_param profile)"
