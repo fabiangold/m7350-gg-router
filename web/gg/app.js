@@ -164,6 +164,7 @@
     setText("storageRoot", data.storage_root);
     setText("storageState", data.storage_usr);
     setText("openvpnProc", data.openvpn);
+    setText("openvpnProcLine", data.openvpn);
     setText("adbState", data.adb);
     setText("adbStateDetail", data.adb);
     setText("privacyState", data.privacy);
@@ -210,6 +211,7 @@
     setBadge("displayPass", data.show_passphrase === "0" ? "good" : "warn");
     setBadge("apIsolation", data.ap_isolate === "1" ? "good" : "warn");
     setBadge("openvpnProc", data.openvpn === "running" ? "good" : "bad");
+    setBadge("openvpnProcLine", data.openvpn === "running" ? "good" : "bad");
     setBadge("adbState", data.adb === "on" ? "warn" : "good");
     setBadge("adbStateDetail", data.adb === "on" ? "warn" : "good");
     setBadge("tokenState", data.token === "on" || data.token === "set" ? "good" : "warn");
