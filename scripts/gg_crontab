@@ -1,2 +1,3 @@
 */2 * * * * /usrdata/vpn/gg_watchdog.sh
 0 3 * * * /usrdata/vpn/gg_daily_backup.sh
+@reboot sleep 90 && /etc/init.d/start_vpn start
