@@ -5,6 +5,7 @@ print_header
 require_token
 
 ACTION="$(get_param action)"
+KEY_FILE="$VPN_DIR/backup.key"
 SD_BACKUP_DIR="/usrdata/sd/gg_backups"
 INT_BACKUP_DIR="/usrdata/gg_backups"
 if grep -q '/usrdata/sd' /proc/mounts 2>/dev/null; then
@@ -12,6 +13,13 @@ if grep -q '/usrdata/sd' /proc/mounts 2>/dev/null; then
 else
   BACKUP_DIR="$INT_BACKUP_DIR"
 fi
+
+ensure_key() {
+  if [ ! -f "$KEY_FILE" ]; then
+    dd if=/dev/urandom bs=32 count=1 2>/dev/null | od -An -tx1 | tr -d ' \n' > "$KEY_FILE"
+    chmod 600 "$KEY_FILE"
+  fi
+}
 
 apply_hardening() {
   uci -c /data/config set wlan.basic_setting.show_passphrase_on_oled='0' 2>/dev/null
@@ -46,39 +54,56 @@ gen_token() {
 }
 
 backup_create() {
+  ensure_key
   mkdir -p "$BACKUP_DIR"
   chmod 700 "$BACKUP_DIR" 2>/dev/null || true
   ts=$(date +%Y%m%d_%H%M%S)
-  dest="$BACKUP_DIR/gg_backup_${ts}.tar.gz"
-  cd "$VPN_DIR" && tar czf "$dest" auth.txt web_token current_profile current.ovpn profiles/ 2>/dev/null
-  if [ -f "$dest" ]; then
+  dest="$BACKUP_DIR/gg_backup_${ts}.tar.gz.enc"
+  cd "$VPN_DIR" && tar czf - auth.txt web_token current_profile current.ovpn profiles/ 2>/dev/null | \
+    openssl enc -aes-256-cbc -kfile "$KEY_FILE" -md sha256 -out "$dest" 2>/dev/null
+  if [ -f "$dest" ] && [ -s "$dest" ]; then
     chmod 600 "$dest" 2>/dev/null || true
     echo "backup=$dest"
   else
+    rm -f "$dest" 2>/dev/null
     echo "error=backup failed"
   fi
 }
 
 backup_list() {
-  ls -1t "$BACKUP_DIR"/gg_backup_*.tar.gz 2>/dev/null | head -10 || echo "none"
+  ls -1t "$BACKUP_DIR"/gg_backup_*.tar.gz.enc 2>/dev/null | head -10 || echo "none"
 }
 
 backup_restore() {
   name="$(basename "$(get_param file)")"
   case "$name" in
-    gg_backup_*.tar.gz)
+    gg_backup_*.tar.gz.enc)
       src="$BACKUP_DIR/$name"
       if [ ! -f "$src" ]; then
         echo "error=not found"
         return
       fi
-      cd "$VPN_DIR" && tar xzf "$src" 2>/dev/null && \
-        echo "ok=restored from $name" || echo "error=extract failed"
+      if [ ! -f "$KEY_FILE" ]; then
+        echo "error=backup.key fehlt"
+        return
+      fi
+      openssl enc -d -aes-256-cbc -kfile "$KEY_FILE" -md sha256 -in "$src" 2>/dev/null | \
+        tar xzf - -C "$VPN_DIR" 2>/dev/null && \
+        echo "ok=restored from $name" || echo "error=decrypt or extract failed"
       ;;
     *)
       echo "error=invalid filename"
       ;;
   esac
+}
+
+backup_show_key() {
+  if [ -f "$KEY_FILE" ]; then
+    echo "key=$(cat "$KEY_FILE")"
+  else
+    ensure_key
+    echo "key=$(cat "$KEY_FILE")"
+  fi
 }
 
 case "$ACTION" in
@@ -96,6 +121,9 @@ case "$ACTION" in
     ;;
   backup_restore)
     backup_restore
+    ;;
+  backup_key)
+    backup_show_key
     ;;
   status)
     echo "telnet=$(netstat -lnt 2>/dev/null | grep -q ':23 ' && echo open || echo closed)"
