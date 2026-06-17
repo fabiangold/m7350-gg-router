@@ -1,6 +1,7 @@
 (function () {
   "use strict";
 
+  // --- Token-Handling ---
   var queryToken = "";
   try {
     queryToken = new URLSearchParams(window.location.search).get("token") || "";
@@ -20,14 +21,21 @@
     } catch(e) {}
   }
 
-  function showTokenOverlay() {
+  function showTokenOverlay(wrongToken) {
     var ov = document.getElementById("tokenOverlay");
-    if (ov) ov.style.display = "flex";
+    if (!ov) return;
+    ov.style.display = "flex";
+    if (wrongToken) {
+      var hint = document.getElementById("tokenHint");
+      if (hint) { hint.textContent = "Token ungueltig. Bitte erneut eingeben."; hint.style.color = "#ff6b6b"; }
+    }
   }
 
   function hideTokenOverlay() {
     var ov = document.getElementById("tokenOverlay");
     if (ov) ov.style.display = "none";
+    var hint = document.getElementById("tokenHint");
+    if (hint) { hint.textContent = ""; }
   }
 
   function submitToken() {
@@ -52,20 +60,26 @@
     if (!token) showTokenOverlay();
   });
 
-  function qs(id) {
-    return document.getElementById(id);
-  }
+  // --- Helpers ---
+  function qs(id) { return document.getElementById(id); }
 
   function api(script, params) {
     params = params || {};
     if (token) params.token = token;
     var query = Object.keys(params)
-      .map(function (key) {
-        return encodeURIComponent(key) + "=" + encodeURIComponent(params[key]);
-      })
+      .map(function(key) { return encodeURIComponent(key) + "=" + encodeURIComponent(params[key]); })
       .join("&");
     return fetch("/cgi-bin/" + script + "?" + query, { cache: "no-store" })
-      .then(function (res) { return res.text(); });
+      .then(function(res) {
+        if (res.status === 403) {
+          // Token falsch oder abgelaufen -> Overlay zeigen, keine Verarbeitung
+          token = "";
+          try { localStorage.removeItem("gg_token"); } catch(e) {}
+          showTokenOverlay(true);
+          return Promise.reject(new Error("FORBIDDEN"));
+        }
+        return res.text();
+      });
   }
 
   function setText(id, value) {
@@ -108,7 +122,7 @@
 
   function parseStatus(text) {
     var data = {};
-    text.split(/\r?\n/).forEach(function (line) {
+    text.split(/\r?\n/).forEach(function(line) {
       var idx = line.indexOf("=");
       if (idx > 0) data[line.slice(0, idx)] = line.slice(idx + 1);
     });
@@ -119,11 +133,8 @@
     var box = qs("clientList");
     if (!box) return;
     box.innerHTML = "";
-    if (!value || value === "--") {
-      box.textContent = "--";
-      return;
-    }
-    value.split("|").forEach(function (row) {
+    if (!value || value === "--") { box.textContent = "--"; return; }
+    value.split("|").forEach(function(row) {
       var parts = row.split(",");
       var div = document.createElement("div");
       div.className = "client-row";
@@ -192,6 +203,13 @@
     setText("maxClients", data.max_assoc_sta);
     renderClients(data.client_list);
 
+    // SD-Karte im Dashboard
+    var sdMounted = data.sd_mounted === "yes";
+    setText("sdMountedDash", sdMounted ? "eingehaengt" : "nicht eingehaengt");
+    setBadge("sdMountedDash", sdMounted ? "good" : "warn");
+    setText("sdFreeDash", data.sd_free || "--");
+    setText("sdBackupDash", data.sd_backup_last || "--");
+
     setBadge("vpnState", connected ? "good" : "bad");
     setBadge("vpnStateVpn", connected ? "good" : "bad");
     setBadge("profile", data.profile && data.profile !== "unknown" ? "good" : "warn");
@@ -220,7 +238,7 @@
     setBadge("tokenStateSec", data.token === "on" ? "good" : "bad");
     setBadge("tokenStateLine", data.token === "on" ? "good" : "bad");
 
-    Array.prototype.forEach.call(document.querySelectorAll("[data-profile]"), function (button) {
+    Array.prototype.forEach.call(document.querySelectorAll("[data-profile]"), function(button) {
       button.className = button.getAttribute("data-profile") === data.profile ? "active" : "";
     });
   }
@@ -229,7 +247,8 @@
     return api("gg_status.sh", {})
       .then(parseStatus)
       .then(renderStatus)
-      .catch(function () {
+      .catch(function(err) {
+        if (err && err.message === "FORBIDDEN") return;
         setText("vpnState", "Status error");
         qs("vpnPill").className = "status-pill off";
         setText("vpnPill", "ERROR");
@@ -238,105 +257,146 @@
 
   function refreshLog() {
     return api("gg_vpn.sh", { action: "log" })
-      .then(function (text) {
+      .then(function(text) {
         qs("logOutput").textContent = text || "No log output.";
       })
-      .catch(function () {
+      .catch(function(err) {
+        if (err && err.message === "FORBIDDEN") return;
         qs("logOutput").textContent = "Could not load log.";
       });
   }
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (button) {
-    button.addEventListener("click", function () {
+  // --- SD-Tab ---
+  function refreshSdStatus() {
+    var el = qs("sdOutput");
+    if (el) el.textContent = "Lade...";
+    return api("gg_sd.sh", { action: "status" })
+      .then(parseStatus)
+      .then(function(data) {
+        var mounted = data.sd_mounted === "yes";
+        setText("sdMountState", mounted ? "eingehaengt" : "nicht eingehaengt");
+        setBadge("sdMountState", mounted ? "good" : "warn");
+        setText("sdMountedDetail", mounted ? "ja" : "nein");
+        setBadge("sdMountedDetail", mounted ? "good" : "warn");
+        setText("sdFreeDetail", data.sd_free || "--");
+        setText("sdTotalDetail", data.sd_total || "--");
+        setText("sdFsDetail", data.sd_fs || "--");
+        setText("sdBackupLastDetail", data.sd_backup_last || "--");
+        setText("sdFilesDetail", data.sd_files || "--");
+
+        var mountBtn = qs("sdMount");
+        if (mountBtn) mountBtn.style.display = mounted ? "none" : "";
+        var umountBtn = qs("sdUmount");
+        if (umountBtn) umountBtn.style.display = mounted ? "" : "none";
+        var backupBtn = qs("sdBackup");
+        if (backupBtn) backupBtn.disabled = !mounted;
+
+        if (el) el.textContent = mounted ? "SD-Karte eingehaengt.\nFrei: " + (data.sd_free || "--") + " / " + (data.sd_total || "--") + "\nLetztes Backup: " + (data.sd_backup_last || "--") : "SD-Karte nicht eingehaengt.";
+      })
+      .catch(function(err) {
+        if (err && err.message === "FORBIDDEN") return;
+        if (el) el.textContent = "Fehler beim Laden.";
+      });
+  }
+
+  // --- Tab-Navigation ---
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function(button) {
+    button.addEventListener("click", function() {
       var tab = button.getAttribute("data-tab");
-      Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function (item) {
+      Array.prototype.forEach.call(document.querySelectorAll("[data-tab]"), function(item) {
         item.className = item === button ? "active" : "";
       });
-      Array.prototype.forEach.call(document.querySelectorAll(".tab-panel"), function (panel) {
+      Array.prototype.forEach.call(document.querySelectorAll(".tab-panel"), function(panel) {
         panel.className = panel.id === "tab-" + tab ? "tab-panel active" : "tab-panel";
       });
       if (tab === "logs") refreshLog();
+      if (tab === "sd") refreshSdStatus();
     });
   });
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-action]"), function (button) {
-    button.addEventListener("click", function () {
+  // --- VPN-Buttons ---
+  Array.prototype.forEach.call(document.querySelectorAll("[data-action]"), function(button) {
+    button.addEventListener("click", function() {
       button.disabled = true;
       api("gg_vpn.sh", { action: button.getAttribute("data-action") })
-        .then(function (text) {
+        .then(function(text) {
           qs("logOutput").textContent = text;
           setTimeout(refreshStatus, 1200);
         })
-        .finally(function () { button.disabled = false; });
+        .catch(function() {})
+        .finally(function() { button.disabled = false; });
     });
   });
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-privacy]"), function (button) {
-    button.addEventListener("click", function () {
+  // --- Privacy-Buttons ---
+  Array.prototype.forEach.call(document.querySelectorAll("[data-privacy]"), function(button) {
+    button.addEventListener("click", function() {
       button.disabled = true;
       api("gg_privacy.sh", { action: button.getAttribute("data-privacy") })
-        .then(function (text) {
+        .then(function(text) {
           qs("logOutput").textContent = text;
           setTimeout(refreshStatus, 800);
         })
-        .finally(function () { button.disabled = false; });
+        .catch(function() {})
+        .finally(function() { button.disabled = false; });
     });
   });
 
-  Array.prototype.forEach.call(document.querySelectorAll("[data-profile]"), function (button) {
-    button.addEventListener("click", function () {
+  // --- Profil-Switch ---
+  Array.prototype.forEach.call(document.querySelectorAll("[data-profile]"), function(button) {
+    button.addEventListener("click", function() {
       button.disabled = true;
-      api("gg_vpn.sh", {
-        action: "switch",
-        profile: button.getAttribute("data-profile")
-      })
-        .then(function (text) {
+      api("gg_vpn.sh", { action: "switch", profile: button.getAttribute("data-profile") })
+        .then(function(text) {
           qs("logOutput").textContent = text;
-          setTimeout(function () {
-            refreshStatus();
-            refreshLog();
-          }, 2500);
+          setTimeout(function() { refreshStatus(); refreshLog(); }, 2500);
         })
-        .finally(function () { button.disabled = false; });
+        .catch(function() {})
+        .finally(function() { button.disabled = false; });
     });
   });
 
-  qs("checkIp").addEventListener("click", function () {
+  // --- IP-Check ---
+  qs("checkIp").addEventListener("click", function() {
     var button = qs("checkIp");
     button.disabled = true;
-    setText("publicIp", "checking");
-    setText("publicIpVpn", "checking");
+    setText("publicIp", "checking...");
+    setText("publicIpVpn", "checking...");
     api("gg_vpn.sh", { action: "ipcheck" })
-      .then(function (text) {
-        var ip = text.replace(/\s+/g, " ");
+      .then(function(text) {
+        var ip = text.trim();
         setText("publicIp", ip);
         setText("publicIpVpn", ip);
       })
-      .finally(function () { button.disabled = false; });
+      .catch(function() {})
+      .finally(function() { button.disabled = false; });
   });
 
-  qs("applyHardening").addEventListener("click", function () {
+  // --- Hardening ---
+  qs("applyHardening").addEventListener("click", function() {
     var button = qs("applyHardening");
     button.disabled = true;
     api("gg_security.sh", { action: "harden" })
-      .then(function (text) {
+      .then(function(text) {
         qs("logOutput").textContent = text;
         setTimeout(refreshStatus, 800);
       })
-      .finally(function () { button.disabled = false; });
+      .catch(function() {})
+      .finally(function() { button.disabled = false; });
   });
 
-  qs("rotateToken").addEventListener("click", function () {
-    if (!window.confirm("Neuen zufälligen Token generieren? Der aktuelle Token wird ungültig.")) return;
+  // --- Token rotieren ---
+  qs("rotateToken").addEventListener("click", function() {
+    if (!window.confirm("Neuen zufaelligen Token generieren? Der aktuelle Token wird ungueling.")) return;
     var button = qs("rotateToken");
     button.disabled = true;
     api("gg_security.sh", { action: "gentoken" })
-      .then(function (text) {
+      .then(function(text) {
         var match = text.match(/new_token=([a-f0-9]+)/);
         if (match) {
           var newTok = match[1];
           token = newTok;
-          localStorage.setItem("gg_token", newTok);
+          try { localStorage.setItem("gg_token", newTok); } catch(e) {}
           var box = qs("newTokenBox");
           box.style.display = "block";
           box.innerHTML = "<strong style='color:var(--green)'>Neuer Token (kopieren!):</strong><br>" + newTok;
@@ -344,15 +404,17 @@
           qs("logOutput").textContent = text;
         }
       })
-      .finally(function () { button.disabled = false; });
+      .catch(function() {})
+      .finally(function() { button.disabled = false; });
   });
 
-  qs("createBackup").addEventListener("click", function () {
+  // --- Backup (verschluesselt, System-Tab) ---
+  qs("createBackup").addEventListener("click", function() {
     var button = qs("createBackup");
     button.disabled = true;
     setText("backupState", "...");
     api("gg_security.sh", { action: "backup" })
-      .then(function (text) {
+      .then(function(text) {
         var box = qs("backupOutput");
         box.style.display = "block";
         box.textContent = text;
@@ -364,33 +426,90 @@
           setText("backupState", "Fehler");
         }
       })
-      .finally(function () { button.disabled = false; });
+      .catch(function() {})
+      .finally(function() { button.disabled = false; });
   });
 
-  qs("listBackups").addEventListener("click", function () {
+  qs("listBackups").addEventListener("click", function() {
     var button = qs("listBackups");
     button.disabled = true;
     api("gg_security.sh", { action: "backup_list" })
-      .then(function (text) {
+      .then(function(text) {
         var box = qs("backupOutput");
         box.style.display = "block";
         box.textContent = text || "Keine Backups vorhanden.";
       })
-      .finally(function () { button.disabled = false; });
+      .catch(function() {})
+      .finally(function() { button.disabled = false; });
   });
 
-  qs("refreshLog").addEventListener("click", refreshLog);
-  qs("clearLog").addEventListener("click", function () {
-    api("gg_vpn.sh", { action: "clearlog" })
-      .then(function (text) {
-        qs("logOutput").textContent = text;
-      });
+  // --- SD-Karte Tab-Buttons ---
+  var sdMount = qs("sdMount");
+  if (sdMount) sdMount.addEventListener("click", function() {
+    sdMount.disabled = true;
+    api("gg_sd.sh", { action: "mount" })
+      .then(function(text) {
+        var el = qs("sdOutput");
+        if (el) el.textContent = text;
+        setTimeout(refreshSdStatus, 500);
+      })
+      .catch(function() {})
+      .finally(function() { sdMount.disabled = false; });
   });
-  qs("refreshAll").addEventListener("click", function () {
+
+  var sdUmount = qs("sdUmount");
+  if (sdUmount) sdUmount.addEventListener("click", function() {
+    if (!window.confirm("SD-Karte aushängen?")) return;
+    sdUmount.disabled = true;
+    api("gg_sd.sh", { action: "umount" })
+      .then(function(text) {
+        var el = qs("sdOutput");
+        if (el) el.textContent = text;
+        setTimeout(refreshSdStatus, 500);
+      })
+      .catch(function() {})
+      .finally(function() { sdUmount.disabled = false; });
+  });
+
+  var sdBackup = qs("sdBackup");
+  if (sdBackup) sdBackup.addEventListener("click", function() {
+    sdBackup.disabled = true;
+    var el = qs("sdOutput");
+    if (el) el.textContent = "Backup laeuft...";
+    api("gg_sd.sh", { action: "backup" })
+      .then(function(text) {
+        if (el) el.textContent = text;
+        setTimeout(refreshSdStatus, 800);
+      })
+      .catch(function() {})
+      .finally(function() { sdBackup.disabled = false; });
+  });
+
+  var sdListFiles = qs("sdListFiles");
+  if (sdListFiles) sdListFiles.addEventListener("click", function() {
+    sdListFiles.disabled = true;
+    api("gg_sd.sh", { action: "list" })
+      .then(function(text) {
+        var el = qs("sdOutput");
+        if (el) el.textContent = text || "Keine Dateien gefunden.";
+      })
+      .catch(function() {})
+      .finally(function() { sdListFiles.disabled = false; });
+  });
+
+  // --- Log-Buttons ---
+  qs("refreshLog").addEventListener("click", refreshLog);
+  qs("clearLog").addEventListener("click", function() {
+    api("gg_vpn.sh", { action: "clearlog" })
+      .then(function(text) { qs("logOutput").textContent = text; })
+      .catch(function() {});
+  });
+  qs("refreshAll").addEventListener("click", function() {
     refreshStatus();
     refreshLog();
   });
 
+  // --- Init ---
   refreshStatus();
   refreshLog();
   window.setInterval(refreshStatus, 5000);

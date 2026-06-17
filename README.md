@@ -202,16 +202,19 @@ powershell -ExecutionPolicy Bypass -File .\deploy_tplink_logos.ps1 `
 
 Das Skript sichert vorher automatisch die aktive Datei nach `/usrdata/vpn/oled_res.before_gg_logo_*`.
 
-## Eigenes Webinterface
+## Eigenes Webinterface (GG Web UI)
 
-Die erste Version liegt unter:
+Das Web-Interface unter `/gg/` ersetzt die TP-Link-Weboberflaeche und steuert VPN, Datenschutz, Sicherheit und SD-Karte.
 
-- `web/gg/index.html`
-- `web/gg/style.css`
-- `web/gg/app.js`
-- `web/cgi-bin/gg_status.sh`
-- `web/cgi-bin/gg_vpn.sh`
-- `web/cgi-bin/gg_privacy.sh`
+Dateien:
+
+- `web/gg/index.html`, `web/gg/style.css`, `web/gg/app.js` - Frontend
+- `web/cgi-bin/gg_common.sh` - Shared-Lib: Token-Auth, Header, Hilfsfunktionen
+- `web/cgi-bin/gg_status.sh` - Systemstatus (VPN, Netz, Akku, WLAN, SD-Karte)
+- `web/cgi-bin/gg_vpn.sh` - VPN starten/stoppen, Profil wechseln, Log
+- `web/cgi-bin/gg_privacy.sh` - TP-Link Cloud blocken/entsperren
+- `web/cgi-bin/gg_security.sh` - WLAN-Haertung, Token rotieren, verschluesseltes Backup
+- `web/cgi-bin/gg_sd.sh` - SD-Karte einhaengen/aushaengen, GG-SD Backup, Dateiliste
 
 Deploy per ADB:
 
@@ -219,7 +222,7 @@ Deploy per ADB:
 powershell -ExecutionPolicy Bypass -File .\deploy_gg_web.ps1
 ```
 
-Mit Web-Token:
+Mit Web-Token (empfohlen):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy_gg_web.ps1 -SetToken -Token "DEIN_TOKEN"
@@ -230,3 +233,64 @@ Danach:
 ```text
 http://192.168.0.1/gg/
 ```
+
+### Token-Authentifizierung
+
+Wenn `/usrdata/vpn/web_token` existiert, verlangen alle CGI-Endpunkte einen gueltigen Token.
+Falsche oder fehlende Token werden mit HTTP 403 abgelehnt — das UI zeigt automatisch den Token-Dialog.
+
+Token rotieren: Im UI unter "System" → "Token rotieren", oder per ADB:
+
+```powershell
+adb shell "echo 'NEUER_TOKEN' > /usrdata/vpn/web_token"
+```
+
+### CGI-Endpunkte absichern
+
+lighttpd sperrt alle TP-Link-eigenen CGI-Endpunkte (`/cgi-bin/`), nur `gg_*`-Skripte bleiben erreichbar.
+Konfiguration: `scripts/lighttpd_gg_redirect.conf`.
+
+Der Router leitet `http://192.168.0.1/` automatisch nach `/gg/` um.
+
+### TP-Link Cloud-Blockade (3-Schichten)
+
+`scripts/block_tplink_cloud.sh` blockiert TP-Link/Tether auf drei Ebenen:
+
+1. `/etc/hosts` — 9 Cloud-Domaenen auf 0.0.0.0 zeigen lassen
+2. `iptables OUTPUT` — 26 AWS-IPs (eu-west-1 / us-east-1) droppen
+3. Prozesse — `cloud_brd`, `cloud_client` und weitere beenden
+
+```powershell
+adb shell "/usrdata/vpn/block_tplink_cloud.sh"
+```
+
+Rueckgaengig (alle drei Schichten):
+
+```powershell
+adb shell "/usrdata/vpn/unblock_tplink_cloud.sh"
+```
+
+Der Watchdog (`gg_watchdog.sh`) beendet Cloud-Prozesse alle 2 Minuten erneut, falls sie neu starten.
+
+## SD-Karte (GG-SD Backup)
+
+`scripts/gg_sd_backup.sh` sichert alle GG-Konfigurationsdateien auf `/usrdata/sd/GG-SD/`:
+
+- VPN-Skripte (ohne Secrets)
+- lighttpd-Konfiguration
+- CGI-Skripte (`gg_*.sh`)
+- Web-Interface (`/usrdata/www/`)
+- UCI WLAN-Snapshot
+- MANIFEST.txt
+
+Nie gesichert: `auth.txt`, `web_token`, `*.ovpn`, `*.key`
+
+Das Backup laeuft automatisch einmal taeglich (Watchdog-Trigger, Stempel `/tmp/gg_sd_backup_done_YYYYMMDD`).
+Manuell ausfuehren: im UI unter "SD Karte" → "GG-SD Backup", oder per ADB:
+
+```powershell
+adb shell "/usrdata/vpn/gg_sd_backup.sh"
+```
+
+Der Watchdog versucht beim Start die SD-Karte einzuhaengen (vfat → exfat → ext4).
+Die SD-Karte kann auch im UI unter "SD Karte" ein- und ausgehaengt werden.

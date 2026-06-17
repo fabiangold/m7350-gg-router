@@ -55,9 +55,23 @@ enforce_kill_switch
 disable_ipv6
 
 # SD-Karte einhaengen wenn vorhanden und noch nicht gemountet
+# Versucht mehrere Dateisysteme (vfat/exfat/ext4)
 SD_MOUNT="/usrdata/sd"
-grep -q "$SD_MOUNT" /proc/mounts 2>/dev/null || \
-  mount -t vfat /dev/mmcblk0p1 "$SD_MOUNT" 2>/dev/null
+SD_DEV="/dev/mmcblk0p1"
+if ! grep -q " $SD_MOUNT " /proc/mounts 2>/dev/null && [ -b "$SD_DEV" ]; then
+  mkdir -p "$SD_MOUNT"
+  mount -t vfat "$SD_DEV" "$SD_MOUNT" 2>/dev/null || \
+  mount -t exfat "$SD_DEV" "$SD_MOUNT" 2>/dev/null || \
+  mount -t ext4 "$SD_DEV" "$SD_MOUNT" 2>/dev/null || true
+fi
+
+# GG-SD Konfig-Backup: taeglich einmal (Stempel-Datei verhindert Mehrfach-Lauf)
+SD_BACKUP_SH="$VPN_DIR/gg_sd_backup.sh"
+SD_STAMP="/tmp/gg_sd_backup_done_$(date +%Y%m%d)"
+if grep -q " $SD_MOUNT " /proc/mounts 2>/dev/null && \
+   [ -x "$SD_BACKUP_SH" ] && [ ! -f "$SD_STAMP" ]; then
+  "$SD_BACKUP_SH" >> "$LOG" 2>&1 && touch "$SD_STAMP"
+fi
 
 # TP-Link/unsichere Dienste beenden (starten sich ggf. neu)
 kill_processes cloud_brd cloud_client atfwd_daemon upnpd wscd telnetd

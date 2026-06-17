@@ -7,7 +7,7 @@ GG_IMG="/usrdata/www/images"
 WEB_IMG="/WEBSERVER/www/images"
 GG_ROOT="$GG_SRC/root"
 WEB_ROOT="/WEBSERVER/www"
-CGI_SCRIPTS="gg_common.sh gg_status.sh gg_vpn.sh gg_privacy.sh gg_security.sh"
+CGI_SCRIPTS="gg_common.sh gg_status.sh gg_vpn.sh gg_privacy.sh gg_security.sh gg_sd.sh"
 LOGO_FILES="logo_small.png logo_big.png phone/logo.png favicon.png app.png phone/app.png"
 ROOT_FILES="login.html phoneIndex.html"
 

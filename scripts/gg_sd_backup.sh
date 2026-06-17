@@ -14,7 +14,7 @@ CGI_SRC="/WEBSERVER/www/cgi-bin"
 LOG="$BACKUP_DIR/gg_sd_backup.log"
 
 # --- Pruefe SD-Karte ---
-if ! grep -q "$SD_MOUNT" /proc/mounts 2>/dev/null; then
+if ! grep -q " $SD_MOUNT " /proc/mounts 2>/dev/null; then
   echo "FEHLER: SD-Karte nicht eingehaengt unter $SD_MOUNT"
   exit 1
 fi
@@ -76,8 +76,11 @@ cp_dir "$WWW_DIR" "$BACKUP_DIR/www" | tee -a "$LOG"
 
 # --- 5. UCI WLAN-Snapshot ---
 echo "--- UCI WLAN ---" | tee -a "$LOG"
-uci -c /data/config show wlan 2>/dev/null > "$BACKUP_DIR/uci_wlan.txt" && \
-  echo "  OK uci wlan snapshot" || echo "  FEHLER uci wlan" | tee -a "$LOG"
+if uci -c /data/config show wlan 2>/dev/null > "$BACKUP_DIR/uci_wlan.txt"; then
+  echo "  OK uci wlan snapshot" | tee -a "$LOG"
+else
+  echo "  FEHLER uci wlan" | tee -a "$LOG"
+fi
 
 # --- 6. Manifest ---
 echo "--- Manifest ---" | tee -a "$LOG"

@@ -13,6 +13,7 @@ $initScript     = Join-Path $root "scripts\start_gg_web"
 $vpnScript      = Join-Path $root "scripts\vpn_hardened.sh"
 $watchdogScript = Join-Path $root "scripts\gg_watchdog.sh"
 $dailyBackupScript = Join-Path $root "scripts\gg_daily_backup.sh"
+$sdBackupScript    = Join-Path $root "scripts\gg_sd_backup.sh"
 $cronFile       = Join-Path $root "scripts\gg_crontab"
 $oledScript     = Join-Path $root "scripts\gg_oled.sh"
 $oledOnRaw      = Join-Path $root "assets\oled_vpn_on.raw"
@@ -53,6 +54,9 @@ Run-Adb @("push", (Join-Path $webRoot "cgi-bin\gg_privacy.sh"),  "/usrdata/www/c
 if (Test-Path (Join-Path $webRoot "cgi-bin\gg_security.sh")) {
     Run-Adb @("push", (Join-Path $webRoot "cgi-bin\gg_security.sh"), "/usrdata/www/cgi-bin/gg_security.sh")
 }
+if (Test-Path (Join-Path $webRoot "cgi-bin\gg_sd.sh")) {
+    Run-Adb @("push", (Join-Path $webRoot "cgi-bin\gg_sd.sh"), "/usrdata/www/cgi-bin/gg_sd.sh")
+}
 Run-Adb @("shell", "chmod 755 /usrdata/www/cgi-bin; chmod 755 /usrdata/www/cgi-bin/gg_*.sh")
 
 # Init-Script deployen und Symlink setzen (einmalig noetig)
@@ -75,6 +79,10 @@ if (Test-Path $watchdogScript) {
 if (Test-Path $dailyBackupScript) {
     Run-Adb @("push", $dailyBackupScript, "/usrdata/vpn/gg_daily_backup.sh")
     Run-Adb @("shell", "chmod 755 /usrdata/vpn/gg_daily_backup.sh")
+}
+if (Test-Path $sdBackupScript) {
+    Run-Adb @("push", $sdBackupScript, "/usrdata/vpn/gg_sd_backup.sh")
+    Run-Adb @("shell", "chmod 755 /usrdata/vpn/gg_sd_backup.sh")
 }
 if (Test-Path $cronFile) {
     Run-Adb @("push", $cronFile, "/tmp/gg_crontab")

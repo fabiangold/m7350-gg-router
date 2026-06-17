@@ -153,6 +153,17 @@
             <div><dt>Token</dt><dd id="tokenState">--</dd></div>
           </dl>
         </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>SD Karte</h2>
+            <span id="sdMountedDash">--</span>
+          </div>
+          <dl class="stats">
+            <div><dt>Frei</dt><dd id="sdFreeDash">--</dd></div>
+            <div><dt>GG-SD Backup</dt><dd id="sdBackupDash">--</dd></div>
+          </dl>
+        </article>
       </div>
     </section>
 
@@ -306,53 +317,29 @@
         <article class="panel primary">
           <div class="panel-head">
             <h2>SD Karte</h2>
-            <span>Status</span>
-          </div>
-          <div class="sd-status">
-            <div class="sd-dot"></div>
-            <span>Keine SD Karte eingesteckt</span>
+            <span id="sdMountState" class="value-badge">--</span>
           </div>
           <dl class="stats">
-            <div><dt>Einhaengepunkt</dt><dd>/mnt/sd</dd></div>
-            <div><dt>Dateisystem</dt><dd>ext4 / exFAT</dd></div>
-            <div><dt>Empfohlene Groesse</dt><dd>≥ 8 GB</dd></div>
+            <div><dt>Eingehaengt</dt><dd id="sdMountedDetail">--</dd></div>
+            <div><dt>Frei</dt><dd id="sdFreeDetail">--</dd></div>
+            <div><dt>Gesamt</dt><dd id="sdTotalDetail">--</dd></div>
+            <div><dt>Dateisystem</dt><dd id="sdFsDetail">--</dd></div>
+            <div><dt>Letztes GG-SD Backup</dt><dd id="sdBackupLastDetail">--</dd></div>
+            <div><dt>Dateien auf GG-SD</dt><dd id="sdFilesDetail">--</dd></div>
           </dl>
+          <div class="action-row">
+            <button id="sdMount">Einhaengen</button>
+            <button id="sdUmount" style="display:none">Aushaengen</button>
+            <button id="sdBackup" disabled>GG-SD Backup</button>
+            <button id="sdListFiles">Dateien auflisten</button>
+          </div>
         </article>
         <article class="panel">
           <div class="panel-head">
-            <h2>Geplante Nutzung</h2>
-            <span>Roadmap</span>
+            <h2>Ausgabe</h2>
+            <span>SD Output</span>
           </div>
-          <div class="sd-plan-list">
-            <div class="sd-plan-item">
-              <span class="tag soon">Bald</span>
-              <div>
-                <strong>Persistente Logs</strong>
-                <p>VPN- und Watchdog-Logs auf SD statt NAND — kein Flash-Verschleiss, kein Datenverlust nach Reboot.</p>
-              </div>
-            </div>
-            <div class="sd-plan-item">
-              <span class="tag soon">Bald</span>
-              <div>
-                <strong>VPN Profile</strong>
-                <p>Alle .ovpn Profile auf SD — einfacher Wechsel ohne ADB oder Reboot.</p>
-              </div>
-            </div>
-            <div class="sd-plan-item">
-              <span class="tag">Geplant</span>
-              <div>
-                <strong>usrdata Backup</strong>
-                <p>Automatisches taeglisches Backup von /usrdata/vpn/ auf die SD Karte.</p>
-              </div>
-            </div>
-            <div class="sd-plan-item">
-              <span class="tag">Geplant</span>
-              <div>
-                <strong>Erweiterter Speicher</strong>
-                <p>OpenVPN Binary, zusaetzliche Tools und Konfigurationen auf SD auslagern.</p>
-              </div>
-            </div>
-          </div>
+          <pre id="sdOutput" class="log-output" style="min-height:8em">--</pre>
         </article>
       </div>
     </section>
