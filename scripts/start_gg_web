@@ -15,15 +15,11 @@ do_mount() {
     if [ -d "$GG_SRC/gg" ] && [ -d "$GG_WEB" ]; then
         mount --bind "$GG_SRC/gg" "$GG_WEB"
     fi
-    for f in $CGI_SCRIPTS; do
-        src="$GG_SRC/cgi-bin/$f"
-        dst="$GG_CGI/$f"
-        if [ -f "$src" ] && [ -f "$dst" ]; then
-            chmod 755 "$src" 2>/dev/null || true
-            mount --bind "$src" "$dst"
-            chmod 755 "$dst" 2>/dev/null || true
-        fi
-    done
+    # Directory-Bind-Mount: gesamtes cgi-bin ersetzen (ermoeglicht neue Scripts ohne Placeholder)
+    if [ -d "$GG_SRC/cgi-bin" ] && [ -d "$GG_CGI" ]; then
+        chmod 755 "$GG_SRC"/cgi-bin/gg_*.sh 2>/dev/null || true
+        mount --bind "$GG_SRC/cgi-bin" "$GG_CGI"
+    fi
     for f in $LOGO_FILES; do
         src="$GG_IMG/$f"
         dst="$WEB_IMG/$f"
@@ -47,9 +43,7 @@ do_umount() {
     for f in $LOGO_FILES; do
         umount "$WEB_IMG/$f" 2>/dev/null || true
     done
-    for f in $CGI_SCRIPTS; do
-        umount "$GG_CGI/$f" 2>/dev/null || true
-    done
+    umount "$GG_CGI" 2>/dev/null || true
     umount "$GG_WEB" 2>/dev/null || true
 }
 
